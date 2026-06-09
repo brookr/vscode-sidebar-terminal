@@ -113,7 +113,6 @@ export class SessionLifecycleManager {
 
       if (result.success) {
         if (result.restoredCount && result.restoredCount > 0) {
-          await this.restoreScrollbackForAllTerminals();
           const skipped =
             result.skippedCount && result.skippedCount > 0
               ? `, ${result.skippedCount} skipped`
@@ -347,8 +346,4 @@ export class SessionLifecycleManager {
     }
   }
 
-  private restoreScrollbackForAllTerminals(): Promise<void> {
-    // Scrollback restoration temporarily disabled
-    return Promise.resolve();
-  }
 }

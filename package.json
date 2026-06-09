@@ -104,16 +104,6 @@
         "category": "Secondary Terminal"
       },
       {
-        "command": "secondaryTerminal.testCliAgentStatus",
-        "title": "Test Claude Status Update",
-        "category": "Secondary Terminal"
-      },
-      {
-        "command": "secondaryTerminal.debugSession",
-        "title": "Debug Session State",
-        "category": "Secondary Terminal"
-      },
-      {
         "command": "secondaryTerminal.saveSession",
         "title": "Save Terminal Session",
         "category": "Secondary Terminal",
@@ -224,18 +214,6 @@
         "icon": "$(history)"
       },
       {
-        "command": "secondaryTerminal.selectProfile",
-        "title": "Select Terminal Profile",
-        "category": "Secondary Terminal",
-        "icon": "$(terminal)"
-      },
-      {
-        "command": "secondaryTerminal.manageProfiles",
-        "title": "Manage Terminal Profiles",
-        "category": "Secondary Terminal",
-        "icon": "$(gear)"
-      },
-      {
         "command": "secondaryTerminal.showVersion",
         "title": "Show Version",
         "category": "Secondary Terminal"
@@ -282,11 +260,6 @@
           "command": "secondaryTerminal.killTerminal",
           "when": "view == secondaryTerminal",
           "group": "navigation@3"
-        },
-        {
-          "command": "secondaryTerminal.selectProfile",
-          "when": "view == secondaryTerminal",
-          "group": "navigation@2"
         },
         {
           "command": "secondaryTerminal.openSettings",
@@ -352,24 +325,12 @@
           "maximum": 10,
           "description": "Minimum number of terminals to keep open"
         },
-        "secondaryTerminal.maxSplitTerminals": {
-          "type": "number",
-          "default": 10,
-          "minimum": 1,
-          "maximum": 10,
-          "description": "Maximum number of terminals to display in split view"
-        },
         "secondaryTerminal.minTerminalHeight": {
           "type": "number",
           "default": 100,
           "minimum": 50,
           "maximum": 200,
           "description": "Minimum height for each terminal in split view (pixels)"
-        },
-        "secondaryTerminal.enableSplitResize": {
-          "type": "boolean",
-          "default": true,
-          "description": "Allow resizing split terminals by dragging splitters"
         },
         "secondaryTerminal.statusDisplayDuration": {
           "type": "number",
@@ -430,16 +391,6 @@
           "type": "boolean",
           "default": true,
           "description": "Controls whether Alt/Option + click will reposition the prompt cursor to underneath the mouse. This feature may not work reliably for some shells or programs."
-        },
-        "secondaryTerminal.enableAtMentionSync": {
-          "type": "boolean",
-          "default": false,
-          "description": "Enable automatic @filename mention when CLI Agent sends to standard terminal"
-        },
-        "secondaryTerminal.focusAfterAtMention": {
-          "type": "boolean",
-          "default": true,
-          "description": "Focus secondary terminal after sending @filename with CMD+OPT+L"
         },
         "secondaryTerminal.enableShellIntegration": {
           "type": "boolean",
@@ -641,73 +592,10 @@
           "maximum": 21,
           "description": "When set, the foreground color of each cell will change to try meet the contrast ratio specified. Example values:\n- 1: Do nothing and use the standard theme colors.\n- 4.5: WCAG AA compliance (minimum).\n- 7: WCAG AAA compliance (enhanced).\n- 21: White on black or black on white."
         },
-        "secondaryTerminal.profiles.windows": {
-          "type": "object",
-          "default": {},
-          "description": "The Windows terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.windows\": { \"Command Prompt\": null }."
-        },
-        "secondaryTerminal.profiles.linux": {
-          "type": "object",
-          "default": {},
-          "description": "The Linux terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.linux\": { \"bash\": null }."
-        },
-        "secondaryTerminal.profiles.osx": {
-          "type": "object",
-          "default": {},
-          "description": "The macOS terminal profiles to present when creating a new terminal via the terminal dropdown. Set to null to exclude a profile from the list, for example: \"secondaryTerminal.profiles.osx\": { \"bash\": null }."
-        },
-        "secondaryTerminal.defaultProfile.windows": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "markdownDescription": "The default terminal profile name on Windows. Enter a **profile name** (not a path). Examples: `PowerShell`, `PowerShell 7`, `Command Prompt`, `Git Bash`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
-        },
-        "secondaryTerminal.defaultProfile.linux": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "markdownDescription": "The default terminal profile name on Linux. Enter a **profile name** (not a path). Examples: `bash`, `zsh`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
-        },
-        "secondaryTerminal.defaultProfile.osx": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "default": null,
-          "markdownDescription": "The default terminal profile name on macOS. Enter a **profile name** (not a path). Examples: `zsh`, `bash`, `fish`. To see available profiles, run `Terminal: Select Default Profile` from the Command Palette."
-        },
         "secondaryTerminal.restoreScrollback": {
           "type": "boolean",
           "default": true,
           "description": "Enable restoration of terminal command history and output (scrollback buffer)"
-        },
-        "secondaryTerminal.scrollbackLines": {
-          "type": "number",
-          "default": 2000,
-          "minimum": 0,
-          "maximum": 10000,
-          "description": "Maximum number of lines to restore from terminal history (0 to disable)"
-        },
-        "secondaryTerminal.scrollbackCompression": {
-          "type": "boolean",
-          "default": true,
-          "description": "Compress scrollback data to reduce storage size"
-        },
-        "secondaryTerminal.scrollbackProgressiveLoad": {
-          "type": "boolean",
-          "default": false,
-          "description": "Load scrollback data progressively for better performance with large histories"
-        },
-        "secondaryTerminal.scrollbackMaxStorageSize": {
-          "type": "number",
-          "default": 20971520,
-          "minimum": 1048576,
-          "maximum": 104857600,
-          "description": "Maximum storage size for scrollback data in bytes (1MB - 100MB)"
         },
         "secondaryTerminal.dynamicSplitDirection": {
           "type": "boolean",
@@ -772,36 +660,6 @@
           "default": true,
           "description": "Enable command history tracking and quick access."
         },
-        "secondaryTerminal.decorations.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable visual decorations for command success/error indicators (Phase 8: Advanced Terminal Features)."
-        },
-        "secondaryTerminal.decorations.showInGutter": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show command decorations in the terminal gutter area."
-        },
-        "secondaryTerminal.decorations.showInOverviewRuler": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show command decorations in the overview ruler."
-        },
-        "secondaryTerminal.decorations.successColor": {
-          "type": "string",
-          "default": "#00ff00",
-          "description": "Color for successful command decorations."
-        },
-        "secondaryTerminal.decorations.errorColor": {
-          "type": "string",
-          "default": "#ff0000",
-          "description": "Color for failed command decorations."
-        },
-        "secondaryTerminal.decorations.runningColor": {
-          "type": "string",
-          "default": "#ffff00",
-          "description": "Color for running command decorations."
-        },
         "secondaryTerminal.activeBorderMode": {
           "type": "string",
           "enum": [
@@ -822,47 +680,10 @@
           "default": "multipleOnly",
           "description": "When to show the blue border around the active terminal"
         },
-        "secondaryTerminal.links.enabled": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable automatic link detection in terminal output (Phase 8: Advanced Terminal Features)."
-        },
-        "secondaryTerminal.links.detectFileLinks": {
-          "type": "boolean",
-          "default": true,
-          "description": "Detect and highlight file paths as clickable links."
-        },
-        "secondaryTerminal.links.detectWebLinks": {
-          "type": "boolean",
-          "default": true,
-          "description": "Detect and highlight web URLs as clickable links."
-        },
-        "secondaryTerminal.links.detectEmailLinks": {
-          "type": "boolean",
-          "default": true,
-          "description": "Detect and highlight email addresses as clickable links."
-        },
-        "secondaryTerminal.links.maxLinksPerLine": {
-          "type": "number",
-          "default": 10,
-          "minimum": 1,
-          "maximum": 50,
-          "description": "Maximum number of links to detect per line for performance."
-        },
         "secondaryTerminal.navigation.enabled": {
           "type": "boolean",
           "default": true,
           "description": "Enable advanced terminal navigation features (Phase 8: Advanced Terminal Features)."
-        },
-        "secondaryTerminal.navigation.showCommandMarks": {
-          "type": "boolean",
-          "default": true,
-          "description": "Show visual marks at command boundaries for easy navigation."
-        },
-        "secondaryTerminal.accessibility.screenReaderSupport": {
-          "type": "boolean",
-          "default": true,
-          "description": "Enable enhanced screen reader support for terminal content (Phase 8: Advanced Terminal Features)."
         },
         "secondaryTerminal.features.enhancedScrollbackPersistence": {
           "type": "boolean",
@@ -914,16 +735,6 @@
             "Log everything including debug messages"
           ],
           "description": "Set the logging level for the extension. View logs in Output > Secondary Terminal."
-        },
-        "secondaryTerminal.logging.enableTimestamp": {
-          "type": "boolean",
-          "default": true,
-          "description": "Include timestamps in log messages."
-        },
-        "secondaryTerminal.logging.enableContext": {
-          "type": "boolean",
-          "default": true,
-          "description": "Include context information (source location) in log messages."
         },
         "secondaryTerminal.panelNavigation.enabled": {
           "type": "boolean",
@@ -1096,12 +907,6 @@
         "command": "secondaryTerminal.runRecentCommand",
         "key": "ctrl+r",
         "mac": "cmd+r",
-        "when": "secondaryTerminalFocus"
-      },
-      {
-        "command": "secondaryTerminal.selectProfile",
-        "key": "ctrl+shift+t",
-        "mac": "cmd+shift+t",
         "when": "secondaryTerminalFocus"
       },
       {

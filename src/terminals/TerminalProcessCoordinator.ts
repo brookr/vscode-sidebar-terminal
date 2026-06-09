@@ -122,9 +122,6 @@ export class TerminalProcessCoordinator {
       case ProcessState.KilledDuringLaunch:
         this.handleLaunchFailure(terminal);
         break;
-      case ProcessState.KilledByProcess:
-        this.attemptProcessRecovery(terminal);
-        break;
     }
   }
 
@@ -155,10 +152,6 @@ export class TerminalProcessCoordinator {
     showWarningMessage(
       `Terminal ${terminal.name} failed to launch. Check your shell configuration.`
     );
-  }
-
-  private attemptProcessRecovery(_terminal: TerminalInstance): void {
-    // Placeholder for persistent terminal recovery
   }
 
   private ensureInitialPrompt(terminalId: string, ptyProcess: any): void {
