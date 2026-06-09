@@ -84,10 +84,3 @@ export interface TerminalCoordinatorConfig {
   readonly bufferSize: number;
   readonly debugMode: boolean;
 }
-
-/**
- * Factory interface for creating terminal coordinators
- */
-export interface ITerminalCoordinatorFactory {
-  create(config: TerminalCoordinatorConfig): ITerminalCoordinator;
-}

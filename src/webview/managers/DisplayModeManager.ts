@@ -26,12 +26,12 @@ import { DOMUtils } from '../utils/DOMUtils';
 /**
  * 表示モードの種類
  */
-export type DisplayMode = 'normal' | 'fullscreen' | 'split';
+type DisplayMode = 'normal' | 'fullscreen' | 'split';
 
 /**
  * Display Mode Manager Interface
  */
-export interface IDisplayModeManager {
+interface IDisplayModeManager {
   initialize(): void;
 
   // モード切り替え

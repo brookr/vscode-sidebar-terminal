@@ -35,13 +35,6 @@
 import * as vscode from 'vscode';
 
 /**
- * Interface for objects that can be disposed
- */
-export interface IDisposable {
-  dispose(): void;
-}
-
-/**
  * Abstract base class for managing disposal of resources.
  * Implements the Disposable pattern with enhanced features.
  */

@@ -7,7 +7,7 @@
 
 import { messageLogger } from './ManagerLogger';
 
-export interface QueuedMessage {
+interface QueuedMessage {
   id: string;
   data: unknown;
   priority: 'high' | 'normal';
@@ -16,7 +16,7 @@ export interface QueuedMessage {
   maxRetries: number;
 }
 
-export interface MessageQueueConfig {
+interface MessageQueueConfig {
   maxRetries?: number;
   processingDelay?: number;
   maxQueueSize?: number;

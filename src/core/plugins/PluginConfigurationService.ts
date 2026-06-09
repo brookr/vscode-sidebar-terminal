@@ -9,12 +9,12 @@ import { log } from '../../utils/logger';
 import type { PluginConfiguration } from './IPlugin';
 import type { PluginManager } from './PluginManager';
 
-export interface AgentPluginConfig {
+interface AgentPluginConfig {
   enabled: boolean;
   confidenceThreshold: number;
 }
 
-export interface PluginSystemConfig {
+interface PluginSystemConfig {
   enablePluginSystem: boolean;
   claude: AgentPluginConfig;
   copilot: AgentPluginConfig;

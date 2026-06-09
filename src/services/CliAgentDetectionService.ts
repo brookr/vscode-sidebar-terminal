@@ -329,11 +329,3 @@ export class CliAgentDetectionService implements ICliAgentDetectionService {
     }
   }
 }
-
-export { CliAgentPatternRegistry } from './CliAgentPatternRegistry';
-export { CliAgentDetectionEngine } from './CliAgentDetectionEngine';
-export { CliAgentStateStore } from './CliAgentStateStore';
-
-export type { AgentType } from '../types/shared';
-export type { DetectionResult, TerminationResult } from './CliAgentDetectionEngine';
-export type { AgentState, AgentStatus, StateChangeEvent } from './CliAgentStateStore';

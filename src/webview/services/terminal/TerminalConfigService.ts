@@ -184,7 +184,7 @@ const createDefaultTerminalConfig = (): WebViewTerminalConfig => {
   };
 };
 
-export const DEFAULT_TERMINAL_CONFIG: WebViewTerminalConfig = createDefaultTerminalConfig();
+const DEFAULT_TERMINAL_CONFIG: WebViewTerminalConfig = createDefaultTerminalConfig();
 
 /**
  * Service for managing terminal configuration

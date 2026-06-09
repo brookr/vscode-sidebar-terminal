@@ -21,7 +21,7 @@ export function safeProcessCwd(fallback?: string): string {
 }
 
 /** Validates that a directory exists and is accessible. */
-export function validateDirectory(dirPath: string): boolean {
+function validateDirectory(dirPath: string): boolean {
   try {
     const stat = fs.statSync(dirPath);
     if (!stat.isDirectory()) return false;
@@ -127,10 +127,6 @@ export function getFirstItem<T>(array: T[] | null | undefined): T | undefined {
 
 export function getFirstValue<T>(map: Map<string, T>): T | undefined {
   return getFirstItem(Array.from(map.values()));
-}
-
-export function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export function safeStringify(obj: unknown): string {

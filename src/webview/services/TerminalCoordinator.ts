@@ -389,4 +389,3 @@ export class TerminalCoordinatorFactory {
 }
 
 // Re-export the interface for convenience
-export { ITerminalCoordinator } from './ITerminalCoordinator';

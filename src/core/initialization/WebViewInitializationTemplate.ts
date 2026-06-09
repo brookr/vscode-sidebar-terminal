@@ -22,7 +22,7 @@
 
 import { info as logInfo, error as logError } from '../../utils/logger';
 
-export interface InitializationMetrics {
+interface InitializationMetrics {
   startTime: number;
   endTime: number;
   duration: number;
@@ -31,7 +31,7 @@ export interface InitializationMetrics {
   error?: unknown;
 }
 
-export interface InitializationContext {
+interface InitializationContext {
   skipDuplicates: boolean;
   performanceTracking: boolean;
   errorRecovery: boolean;

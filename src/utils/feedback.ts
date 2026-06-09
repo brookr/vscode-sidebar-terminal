@@ -6,14 +6,14 @@ import { log } from './logger';
  * Enhanced user feedback and error handling utilities
  */
 
-export enum FeedbackType {
+enum FeedbackType {
   SUCCESS = 'success',
   WARNING = 'warning',
   ERROR = 'error',
   INFO = 'info',
 }
 
-export interface FeedbackOptions {
+interface FeedbackOptions {
   showNotification?: boolean;
   logToConsole?: boolean;
   timeout?: number;
@@ -167,17 +167,6 @@ export function showWarning(message: string, options?: FeedbackOptions): void {
 
 export function showError(message: string, options?: FeedbackOptions): void {
   FeedbackManager.getInstance().showFeedback(FeedbackType.ERROR, message, options);
-}
-
-export function showInfo(message: string, options?: FeedbackOptions): void {
-  FeedbackManager.getInstance().showFeedback(FeedbackType.INFO, message, options);
-}
-
-export function showProgress<T>(
-  title: string,
-  task: (progress: vscode.Progress<{ message?: string; increment?: number }>) => Thenable<T>
-): Thenable<T> {
-  return FeedbackManager.getInstance().showProgress(title, task);
 }
 
 /**

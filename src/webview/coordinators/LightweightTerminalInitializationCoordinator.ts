@@ -53,7 +53,7 @@ interface IEventHandlerManagerDependencies {
   onPageUnload(handler: () => void): void;
 }
 
-export interface IInitializedManagerBundle {
+interface IInitializedManagerBundle {
   settingsPanel: SettingsPanel;
   notificationManager: NotificationManager;
   performanceManager: PerformanceManager;

@@ -8,7 +8,7 @@ import { SerializeAddon } from '@xterm/addon-serialize';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { BaseManager } from './BaseManager';
 
-export interface ScrollbackOptions {
+interface ScrollbackOptions {
   scrollback?: number;
   excludeModes?: boolean;
   excludeAltBuffer?: boolean;
@@ -16,7 +16,7 @@ export interface ScrollbackOptions {
   preserveWrappedLines?: boolean;
 }
 
-export interface ScrollbackData {
+interface ScrollbackData {
   content: string;
   lineCount: number;
   originalSize: number;
@@ -24,7 +24,7 @@ export interface ScrollbackData {
   timestamp: number;
 }
 
-export interface IScrollbackManager {
+interface IScrollbackManager {
   saveScrollback(terminalId: string, options?: ScrollbackOptions): ScrollbackData | null;
   restoreScrollback(terminalId: string, content: string): boolean;
   getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: any): string;

@@ -22,7 +22,7 @@ export interface SessionData {
   sessionRestoreMessage?: string;
 }
 
-export interface SessionRestoreResult {
+interface SessionRestoreResult {
   success: boolean;
   terminalId: string;
   linesRestored: number;

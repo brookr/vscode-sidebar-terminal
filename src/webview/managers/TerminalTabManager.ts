@@ -23,7 +23,7 @@ interface TabSyncInfo {
   isClosable?: boolean;
 }
 
-export interface TerminalTabState {
+interface TerminalTabState {
   tabs: TerminalTab[];
   activeTabId: string | null;
   tabsVisible: boolean;

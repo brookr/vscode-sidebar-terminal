@@ -1,31 +1,12 @@
 /**
- * Keybinding Service
- *
- * Handles VS Code keybinding resolution and command execution.
- * Extracted from InputManager for better separation of concerns.
- */
-
-import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
-
-/**
  * VS Code keybinding settings
  */
-export interface KeybindingSettings {
+interface KeybindingSettings {
   sendKeybindingsToShell?: boolean;
   commandsToSkipShell?: string[];
   allowChords?: boolean;
   allowMnemonics?: boolean;
 }
-
-/**
- * Terminal interaction event emitter type
- */
-export type TerminalInteractionEmitter = (
-  type: string,
-  terminalId: string,
-  data: unknown,
-  manager: IManagerCoordinator
-) => void;
 
 /**
  * KeybindingService

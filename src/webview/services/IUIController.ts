@@ -1,16 +1,3 @@
-/**
- * UI Controller Interface
- * Handles pure UI concerns separated from business logic
- */
-
-export interface TerminalUIState {
-  readonly activeTerminalId: string | undefined;
-  readonly terminalCount: number;
-  readonly availableSlots: number;
-  readonly isSystemReady: boolean;
-  readonly isDebugMode: boolean;
-}
-
 export interface PerformanceMetrics {
   readonly memoryUsage: number;
   readonly cpuUsage: number;
@@ -102,11 +89,4 @@ export interface UIControllerConfig {
   readonly enableCliAgentStatus: boolean;
   readonly defaultTheme: Record<string, string>;
   readonly animationDuration: number;
-}
-
-/**
- * Factory interface for creating UI controllers
- */
-export interface IUIControllerFactory {
-  create(config: UIControllerConfig): IUIController;
 }

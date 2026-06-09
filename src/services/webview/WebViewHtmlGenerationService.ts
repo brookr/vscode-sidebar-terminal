@@ -5,7 +5,7 @@ import { generateNonce } from '../../utils/common';
 /**
  * Interface for HTML generation options
  */
-export interface HtmlGenerationOptions {
+interface HtmlGenerationOptions {
   webview: vscode.Webview;
   extensionUri: vscode.Uri;
   includeSplitStyles?: boolean;
@@ -18,7 +18,7 @@ export interface HtmlGenerationOptions {
 /**
  * Interface for fallback HTML generation
  */
-export interface FallbackHtmlOptions {
+interface FallbackHtmlOptions {
   title?: string;
   message?: string;
   isLoading?: boolean;
@@ -27,7 +27,7 @@ export interface FallbackHtmlOptions {
 /**
  * Interface for error HTML generation
  */
-export interface ErrorHtmlOptions {
+interface ErrorHtmlOptions {
   error: unknown;
   allowRetry?: boolean;
   customMessage?: string;

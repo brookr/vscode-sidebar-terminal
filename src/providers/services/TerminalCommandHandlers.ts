@@ -25,7 +25,7 @@ import { getUnifiedConfigurationService } from '../../config/UnifiedConfiguratio
 /**
  * Dependencies required by TerminalCommandHandlers
  */
-export interface TerminalCommandHandlersDeps {
+interface TerminalCommandHandlersDeps {
   terminalManager: TerminalManager;
   communicationService: WebViewCommunicationService;
   linkResolver: TerminalLinkResolver;

@@ -11,7 +11,7 @@ import { WebviewMessage } from '../../types/common';
 /**
  * Scrollback data response interface
  */
-export interface ScrollbackDataResponse {
+interface ScrollbackDataResponse {
   command: string;
   terminalId?: string;
   scrollbackData?: string[];

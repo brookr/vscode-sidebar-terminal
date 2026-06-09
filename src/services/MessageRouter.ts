@@ -5,7 +5,7 @@
 
 import { log } from '../utils/logger';
 
-export interface MessageHandler<TData = unknown, TResponse = unknown> {
+interface MessageHandler<TData = unknown, TResponse = unknown> {
   handle(data: TData): Promise<TResponse> | TResponse;
 }
 
@@ -16,14 +16,7 @@ export interface MessageRouterConfig {
   readonly maxConcurrentHandlers: number;
 }
 
-export interface MessageContext<TData = unknown> {
-  readonly command: string;
-  readonly data: TData;
-  readonly timestamp: number;
-  readonly id: string;
-}
-
-export interface MessageResult<T = unknown> {
+interface MessageResult<T = unknown> {
   readonly success: boolean;
   readonly data?: T;
   readonly error?: string;

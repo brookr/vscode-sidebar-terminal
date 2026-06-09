@@ -43,7 +43,7 @@ export interface AddonConfig {
 /**
  * Container for loaded addons
  */
-export interface LoadedAddons {
+interface LoadedAddons {
   fitAddon: FitAddon;
   webLinksAddon: WebLinksAddon;
   serializeAddon: SerializeAddon;

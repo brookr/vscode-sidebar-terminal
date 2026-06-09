@@ -11,8 +11,8 @@ import { WebviewMessage } from '../../types/common';
 /**
  * イベントハンドラーの型定義
  */
-export type EventHandler<T = Event> = (event: T) => void | Promise<void>;
-export type MessageEventHandler = (event: MessageEvent<WebviewMessage>) => void | Promise<void>;
+type EventHandler<T = Event> = (event: T) => void | Promise<void>;
+type MessageEventHandler = (event: MessageEvent<WebviewMessage>) => void | Promise<void>;
 
 /**
  * イベント管理インターフェース

@@ -6,7 +6,7 @@ import { TerminalErrorHandler } from '../../utils/feedback';
 /**
  * Performance metrics for WebView lifecycle operations
  */
-export interface WebViewPerformanceMetrics {
+interface WebViewPerformanceMetrics {
   resolveWebviewViewCallCount: number;
   htmlSetOperations: number;
   listenerRegistrations: number;

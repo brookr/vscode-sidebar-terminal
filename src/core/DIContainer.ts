@@ -31,14 +31,14 @@ export enum ServiceLifetime {
  * Service token for type-safe registration and resolution
  */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export class ServiceToken<T> {
+class ServiceToken<T> {
   constructor(public readonly id: string) {}
 }
 
 /**
  * Factory function for creating service instances
  */
-export type Factory<T> = (container: DIContainer) => T;
+type Factory<T> = (container: DIContainer) => T;
 
 /**
  * Service registration metadata

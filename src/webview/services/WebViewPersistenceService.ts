@@ -26,19 +26,19 @@ import { webview as log } from '../../utils/logger';
 // Types and Interfaces
 // ============================================================================
 
-export interface SerializeOptions {
+interface SerializeOptions {
   scrollback?: number;
   excludeAltBuffer?: boolean;
   trimEmptyLines?: boolean;
 }
 
-export interface RestoreOptions {
+interface RestoreOptions {
   progressive?: boolean;
   initialLines?: number;
   validateFormat?: boolean;
 }
 
-export interface TerminalMetadata {
+interface TerminalMetadata {
   dimensions: { cols: number; rows: number };
   cursor?: { x: number; y: number };
   selection?: { start: number; end: number };
@@ -46,14 +46,14 @@ export interface TerminalMetadata {
   timestamp: number;
 }
 
-export interface SerializedTerminalData {
+interface SerializedTerminalData {
   content: string;
   metadata: TerminalMetadata;
   lineCount: number;
   compressed: boolean;
 }
 
-export interface WebViewPersistenceStats {
+interface WebViewPersistenceStats {
   terminalCount: number;
   totalSerializedBytes: number;
   averageSerializationTimeMs: number;

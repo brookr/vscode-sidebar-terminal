@@ -4,7 +4,7 @@ import { TerminalManager } from '../terminals/TerminalManager';
 import { ExtensionPersistenceService } from '../services/persistence/ExtensionPersistenceService';
 import { logger } from '../utils/logger';
 
-export interface SessionLifecycleDeps {
+interface SessionLifecycleDeps {
   getTerminalManager: () => TerminalManager | undefined;
   getSidebarProvider: () => SecondaryTerminalProvider | undefined;
   getExtensionPersistenceService: () => ExtensionPersistenceService | undefined;
@@ -345,5 +345,4 @@ export class SessionLifecycleManager {
       }
     }
   }
-
 }

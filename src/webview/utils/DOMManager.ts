@@ -11,7 +11,7 @@ export interface IDisposable {
   dispose(): void;
 }
 
-export interface ScheduledCallback {
+interface ScheduledCallback {
   callback: () => void;
   priority: number;
 }

@@ -14,12 +14,12 @@ import { terminalLogger } from './ManagerLogger';
 /**
  * Severity levels for error handling
  */
-export type ErrorSeverity = 'error' | 'warn' | 'info';
+type ErrorSeverity = 'error' | 'warn' | 'info';
 
 /**
  * Options for error handling behavior
  */
-export interface ErrorHandlerOptions {
+interface ErrorHandlerOptions {
   /**
    * Severity level (determines emoji and logging level)
    */
@@ -49,7 +49,7 @@ export interface ErrorHandlerOptions {
 /**
  * Result of error handling operation
  */
-export interface ErrorHandlingResult {
+interface ErrorHandlingResult {
   handled: boolean;
   severity: ErrorSeverity;
   message: string;

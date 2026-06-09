@@ -704,24 +704,3 @@ export class ConsolidatedMessageManager implements IMessageManager {
     });
   }
 }
-
-/**
- * Legacy compatibility methods for factory patterns (if needed)
- */
-export class MessageManagerFactory {
-  /**
-   * Create ConsolidatedMessageManager instance
-   */
-  public static create(): ConsolidatedMessageManager {
-    return new ConsolidatedMessageManager();
-  }
-
-  /**
-   * Create test MessageManager instance
-   */
-  public static createForTesting(): ConsolidatedMessageManager {
-    const manager = new ConsolidatedMessageManager();
-    messageLogger.info('🧪 Test MessageManager created');
-    return manager;
-  }
-}

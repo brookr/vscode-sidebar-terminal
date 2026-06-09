@@ -23,7 +23,7 @@ export interface EventHandlerConfig {
 /**
  * Event metrics for monitoring and debugging
  */
-export interface EventMetrics {
+interface EventMetrics {
   totalRegistered: number;
   totalProcessed: number;
   totalDebounced: number;

@@ -21,7 +21,7 @@ import {
  * Base Persistence Port Interface
  * Common interface for both Extension and WebView persistence
  */
-export interface IPersistencePort {
+interface IPersistencePort {
   /**
    * Save the current session
    * @param request Save session request
@@ -52,38 +52,6 @@ export interface IPersistencePort {
    * Dispose of the persistence port
    */
   dispose(): void;
-}
-
-/**
- * Extension Persistence Port Interface
- * Handles persistence on the Extension side (globalState, workspace)
- */
-export interface IExtensionPersistencePort extends IPersistencePort {
-  /**
-   * Get session data
-   * @param sessionId Optional session ID
-   * @returns Promise with session data
-   */
-  getSessionData(sessionId?: string): Promise<SessionDataDTO | null>;
-
-  /**
-   * Store session data
-   * @param data Session data to store
-   * @returns Promise with success status
-   */
-  storeSessionData(data: SessionDataDTO): Promise<boolean>;
-
-  /**
-   * Get storage size
-   * @returns Promise with size in bytes
-   */
-  getStorageSize(): Promise<number>;
-
-  /**
-   * Check storage health
-   * @returns Promise with health status
-   */
-  checkStorageHealth(): Promise<{ healthy: boolean; message?: string }>;
 }
 
 /**

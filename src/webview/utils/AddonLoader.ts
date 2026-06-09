@@ -15,12 +15,12 @@ import { terminalLogger } from './ManagerLogger';
 /**
  * Addon constructor type - any class that can be instantiated and loaded
  */
-export type AddonConstructor<T> = new (...args: any[]) => T;
+type AddonConstructor<T> = new (...args: any[]) => T;
 
 /**
  * Options for addon loading behavior
  */
-export interface AddonLoadOptions {
+interface AddonLoadOptions {
   /**
    * Whether this addon is required (throws on error) or optional (returns undefined on error)
    */
@@ -40,7 +40,7 @@ export interface AddonLoadOptions {
 /**
  * Result of addon loading operation
  */
-export interface AddonLoadResult<T> {
+interface AddonLoadResult<T> {
   addon: T | undefined;
   success: boolean;
   error?: unknown;

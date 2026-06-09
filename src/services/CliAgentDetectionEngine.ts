@@ -25,7 +25,7 @@ import { LRUCache } from '../utils/LRUCache';
 /**
  * Detection result for CLI agent operations
  */
-export interface DetectionResult {
+interface DetectionResult {
   /** Agent type that was detected */
   agentType: AgentType | null;
 
@@ -48,7 +48,7 @@ export interface DetectionResult {
 /**
  * Termination detection result
  */
-export interface TerminationResult {
+interface TerminationResult {
   /** Whether termination was detected */
   isTerminated: boolean;
 

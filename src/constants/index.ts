@@ -51,23 +51,6 @@ export const TERMINAL_CONSTANTS = {
   // Import shared commands
   COMMANDS: SHARED_TERMINAL_COMMANDS,
 } as const;
-
-/**
- * WebView constants
- * Theme definitions moved to src/webview/types/theme.types.ts
- */
-export const WEBVIEW_CONSTANTS = {
-  // CSS variables
-  CSS_VARS: {
-    TAB_INACTIVE_BACKGROUND: 'var(--vscode-tab-inactiveBackground)',
-    TAB_ACTIVE_BACKGROUND: 'var(--vscode-tab-activeBackground)',
-    TAB_INACTIVE_FOREGROUND: 'var(--vscode-tab-inactiveForeground)',
-    TAB_ACTIVE_FOREGROUND: 'var(--vscode-tab-activeForeground)',
-    TAB_BORDER: 'var(--vscode-tab-border)',
-    EDITOR_BACKGROUND: 'var(--vscode-editor-background)',
-  } as const,
-} as const;
-
 export const ERROR_MESSAGES = {
   TERMINAL_CREATION_FAILED: 'Failed to create terminal',
   TERMINAL_CONTAINER_NOT_FOUND: 'Terminal container not found',
@@ -110,43 +93,15 @@ export const VSCODE_COMMANDS = {
  */
 
 // パフォーマンス関連定数
-export { PERFORMANCE_CONSTANTS, type PerformanceConstantsType } from './PerformanceConstants';
+export { PERFORMANCE_CONSTANTS } from './PerformanceConstants';
 
 // タイミング関連定数
-export { TIMING_CONSTANTS, type TimingConstantsType } from './TimingConstants';
-
 // UI/UX関連定数
-export { UI_CONSTANTS, type UIConstantsType } from './UIConstants';
-
 // 通信・メッセージング関連定数
-export { COMMUNICATION_CONSTANTS, type CommunicationConstantsType } from './CommunicationConstants';
-
 // エラーハンドリング関連定数
-export { ERROR_CONSTANTS, type ErrorConstantsType } from './ErrorConstants';
-
 // 設定キャッシュ関連定数
-export { CONFIG_CACHE_CONSTANTS, type ConfigCacheConstantsType } from './ConfigCacheConstants';
-
 // システムターミナル定数（詳細版）
-export {
-  TERMINAL_CONSTANTS as SYSTEM_TERMINAL_CONSTANTS,
-  type TerminalConstantsType,
-} from './TerminalConstants';
-
 // 列挙型
-export {
-  SystemStatus,
-  TerminalAction,
-  MessageSeverity,
-  NotificationType,
-  CliAgentStatus,
-  TerminalState,
-  SessionOperation,
-  PerformanceMetric,
-  ResourceType,
-  ConfigurationCategory,
-} from './EnumConstants';
-
 // 後方互換性のため SystemConstants.ts からもエクスポート
 // 新しいコードでは上記のドメイン別インポートを推奨
 export * from './SystemConstants';

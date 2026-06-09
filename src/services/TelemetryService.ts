@@ -54,21 +54,14 @@ export enum TelemetryEventType {
 /**
  * Telemetry properties interface
  */
-export interface TelemetryProperties {
+interface TelemetryProperties {
   [key: string]: string | number | boolean;
-}
-
-/**
- * Telemetry measurements interface
- */
-export interface TelemetryMeasurements {
-  [key: string]: number;
 }
 
 /**
  * Performance metric data
  */
-export interface PerformanceMetric {
+interface PerformanceMetric {
   operation: string;
   duration: number;
   success: boolean;

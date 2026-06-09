@@ -13,7 +13,7 @@ import { SPLIT_RESIZE_CONSTANTS } from '../constants/webview';
 /**
  * Drag state during resize operation
  */
-export interface DragState {
+interface DragState {
   isActive: boolean;
   resizerElement: HTMLElement | null;
   startPosition: number; // clientX or clientY depending on direction
@@ -30,7 +30,7 @@ export interface DragState {
 /**
  * Configuration for SplitResizeManager
  */
-export interface SplitResizeManagerConfig {
+interface SplitResizeManagerConfig {
   /** Callback to notify PTY about terminal resize */
   onResizeComplete: () => void;
   /** Get current split direction */

@@ -412,25 +412,3 @@ export class ConsolidatedMessageService implements IMessageManager, IManagerLife
     return this.initialized && this.dispatcher.isReady();
   }
 }
-
-/**
- * Factory for creating ConsolidatedMessageService instances
- * (Maintains compatibility with existing factory patterns)
- */
-export class ConsolidatedMessageServiceFactory {
-  /**
-   * Create ConsolidatedMessageService instance
-   */
-  public static create(coordinator?: IManagerCoordinator): ConsolidatedMessageService {
-    return new ConsolidatedMessageService(coordinator);
-  }
-
-  /**
-   * Create test instance
-   */
-  public static createForTesting(): ConsolidatedMessageService {
-    const service = new ConsolidatedMessageService();
-    messageLogger.info('🧪 Test ConsolidatedMessageService created');
-    return service;
-  }
-}

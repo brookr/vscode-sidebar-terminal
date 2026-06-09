@@ -55,7 +55,7 @@ export interface StateTransitionMetadata {
  *
  * Historical record of a state transition.
  */
-export interface StateTransitionRecord {
+interface StateTransitionRecord {
   /** Source state */
   from: TerminalLifecycleState;
   /** Target state */
@@ -85,7 +85,7 @@ export interface StateChangeEvent {
  *
  * Callback function for state change notifications.
  */
-export type StateChangeListener = (event: StateChangeEvent) => void;
+type StateChangeListener = (event: StateChangeEvent) => void;
 
 /**
  * Valid State Transitions Map

@@ -16,7 +16,7 @@ import { CommandRegistry } from '../../../core/CommandRegistry';
 import { TerminalOperationsService, ScrollDirection } from '../services/TerminalOperationsService';
 import { TerminalInteractionEvent } from '../../../../types/common';
 
-export type EmitEventFn = (
+type EmitEventFn = (
   type: TerminalInteractionEvent['type'],
   terminalId: string,
   data: unknown,

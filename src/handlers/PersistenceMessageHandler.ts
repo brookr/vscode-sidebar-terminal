@@ -17,7 +17,7 @@ export interface PersistenceMessage {
   terminalId?: string; // Changed from number to string to match WebviewMessage
 }
 
-export interface PersistenceResponse {
+interface PersistenceResponse {
   success: boolean;
   data?: unknown;
   error?: string;
@@ -27,29 +27,11 @@ export interface PersistenceResponse {
 /**
  * PersistenceMessageHandler interface for dependency injection
  */
-export interface WebViewMessage {
+interface WebViewMessage {
   command: string;
   data: unknown;
   success: boolean;
   timestamp: number;
-}
-
-export interface IPersistenceMessageHandler {
-  handleMessage(message: PersistenceMessage): Promise<PersistenceResponse>;
-  createWebViewMessage(command: string, data: unknown, success?: boolean): WebViewMessage;
-  createErrorResponse(command: string, error: string): WebViewMessage;
-  createSuccessResponse(command: string, data: unknown): WebViewMessage;
-  registerMessageHandlers(): void;
-  handlePersistenceMessage(message: unknown): Promise<PersistenceResponse>;
-}
-
-/**
- * Factory function to create PersistenceMessageHandler instance
- */
-export function createPersistenceMessageHandler(
-  persistenceService: ExtensionPersistenceService
-): IPersistenceMessageHandler {
-  return new PersistenceMessageHandler(persistenceService);
 }
 
 export class PersistenceMessageHandler {

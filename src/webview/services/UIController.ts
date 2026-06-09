@@ -623,4 +623,3 @@ export class UIControllerFactory {
 }
 
 // Re-export the interface for convenience
-export { IUIController } from './IUIController';

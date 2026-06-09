@@ -17,7 +17,7 @@ import { AgentType } from '../types/shared';
 /**
  * Pattern definitions for a specific agent type
  */
-export interface AgentPatternDefinition {
+interface AgentPatternDefinition {
   /** Agent type identifier */
   type: AgentType;
 
@@ -43,7 +43,7 @@ export interface AgentPatternDefinition {
 /**
  * Shell prompt patterns used for termination detection
  */
-export interface ShellPromptPatterns {
+interface ShellPromptPatterns {
   /** Standard shell prompt patterns */
   standard: RegExp[];
 

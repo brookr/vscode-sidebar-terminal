@@ -9,14 +9,14 @@ import { terminalLogger } from '../utils/ManagerLogger';
 import { DOMUtils } from '../utils/DOMUtils';
 import { RENDERING_CONSTANTS } from '../constants/webview';
 
-export interface RenderingOptimizerOptions {
+interface RenderingOptimizerOptions {
   enableWebGL?: boolean;
   resizeDebounceMs?: number;
   minWidth?: number;
   minHeight?: number;
 }
 
-export interface DeviceType {
+interface DeviceType {
   isTrackpad: boolean;
   smoothScrollDuration: number;
 }

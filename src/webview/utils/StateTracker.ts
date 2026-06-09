@@ -35,7 +35,7 @@ import { webview as log } from '../../utils/logger';
 /**
  * Configuration options for StateTracker
  */
-export interface StateTrackerOptions<T> {
+interface StateTrackerOptions<T> {
   /** Time-to-live in milliseconds. If set, items auto-expire after this duration */
   ttlMs?: number;
   /** Callback when an item is added */
@@ -308,23 +308,4 @@ export class StateTracker<T> {
       log(`${prefix} ${message}`);
     }
   }
-}
-
-/**
- * Create a simple boolean state tracker (like a Set<string> for IDs)
- */
-export function createIdTracker(
-  options?: Omit<StateTrackerOptions<string>, 'name'> & { name?: string }
-): StateTracker<string> {
-  return new StateTracker<string>(options);
-}
-
-/**
- * Create a state tracker with automatic expiration
- */
-export function createExpiringTracker<T>(
-  ttlMs: number,
-  options?: Omit<StateTrackerOptions<T>, 'ttlMs'>
-): StateTracker<T> {
-  return new StateTracker<T>({ ...options, ttlMs });
 }

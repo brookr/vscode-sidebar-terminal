@@ -13,7 +13,7 @@ interface ICoordinatorDependencies {
   currentSettings?: PartialTerminalSettings;
 }
 
-export interface IDependencies {
+interface IDependencies {
   coordinator: ICoordinatorDependencies;
 }
 

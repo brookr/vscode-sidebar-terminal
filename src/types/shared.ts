@@ -1,33 +1,3 @@
-/**
- * Shared type definitions - Base types used across all components
- * Type definitions shared between Extension Host and WebView
- */
-
-// ===== Result Pattern (Issue #224) =====
-// Export Result pattern types for standardized error handling
-export type { Result, ErrorDetails } from './result';
-
-export {
-  ErrorCode,
-  ResultError,
-  success,
-  failure,
-  failureFromDetails,
-  failureFromError,
-  isSuccess,
-  isFailure,
-  unwrap,
-  unwrapOr,
-  map,
-  chain,
-  mapError,
-  onFailure,
-  onSuccess,
-  fromPromise,
-  tryCatch,
-  all,
-} from './result';
-
 // ===== Base Terminal Configuration =====
 
 /**
@@ -42,12 +12,12 @@ export type ActiveBorderMode = 'none' | 'always' | 'multipleOnly';
  * Base terminal configuration interface
  * Foundation type for all terminal configurations
  */
-export interface BaseTerminalConfig {}
+interface BaseTerminalConfig {}
 
 /**
  * Display-related configuration
  */
-export interface DisplayConfig extends BaseTerminalConfig {
+interface DisplayConfig extends BaseTerminalConfig {
   readonly fontSize: number;
   readonly fontFamily: string;
   readonly theme?: string;
@@ -57,7 +27,7 @@ export interface DisplayConfig extends BaseTerminalConfig {
 /**
  * Shell-related configuration
  */
-export interface ShellConfig {
+interface ShellConfig {
   readonly shell?: string;
   readonly shellArgs?: string[];
   readonly cwd?: string;
@@ -67,7 +37,7 @@ export interface ShellConfig {
 /**
  * Terminal limits configuration
  */
-export interface TerminalLimitsConfig {
+interface TerminalLimitsConfig {
   readonly maxTerminals: number;
   readonly minTerminalCount?: number;
   readonly protectLastTerminal?: boolean;
@@ -76,7 +46,7 @@ export interface TerminalLimitsConfig {
 /**
  * Interaction-related configuration
  */
-export interface InteractionConfig {
+interface InteractionConfig {
   readonly confirmBeforeKill?: boolean;
   readonly altClickMovesCursor?: boolean;
   readonly multiCursorModifier?: string;
@@ -201,7 +171,7 @@ export interface CompleteTerminalSettings
 /**
  * WebView display settings
  */
-export interface WebViewDisplayConfig extends DisplayConfig {
+interface WebViewDisplayConfig extends DisplayConfig {
   readonly minTerminalHeight: number;
   readonly autoHideStatus: boolean;
   readonly statusDisplayDuration: number;
@@ -221,9 +191,6 @@ export interface WebViewDisplayConfig extends DisplayConfig {
 export interface CompleteExtensionConfig extends WebViewDisplayConfig, TerminalLimitsConfig {}
 
 // ===== Type Aliases =====
-
-export type TerminalTheme = 'auto' | 'dark' | 'light';
-
 /**
  * Canonical CLI agent type shared across extension and webview.
  */
@@ -810,193 +777,4 @@ export interface VsCodeMessage {
 }
 
 // ===== Parameter Object Pattern Interfaces (Issue #225) =====
-
-/**
- * Terminal initialization options (Parameter Object Pattern)
- * Replaces multiple parameters in initializeShellForTerminal
- * @see TerminalManager.initializeShellForTerminal
- */
-export interface TerminalInitOptions {
-  /** Terminal ID to initialize */
-  readonly terminalId: string;
-  /** PTY process instance */
-  readonly ptyProcess: any;
-  /** Whether to run in safe mode (skip shell integration) */
-  readonly safeMode: boolean;
-}
-
-/**
- * Terminal creation options (Parameter Object Pattern)
- * Consolidates parameters for terminal creation functions
- * @see createTerminal functions across multiple managers
- */
-export interface TerminalCreationOptions {
-  /** Terminal ID */
-  readonly terminalId: string;
-  /** Terminal name */
-  readonly terminalName: string;
-  /** Optional terminal configuration */
-  readonly config?: PartialTerminalSettings;
-  /** Terminal number (slot) */
-  readonly terminalNumber?: number;
-  /** Source of the creation request */
-  readonly requestSource?: 'header' | 'panel' | 'command' | 'user';
-}
-
-/**
- * Terminal interaction event options (Parameter Object Pattern)
- * Consolidates parameters for emitting terminal interaction events
- * @see emitTerminalInteractionEvent functions
- */
-export interface TerminalInteractionEventOptions {
-  /** Type of terminal event */
-  readonly type: string;
-  /** Terminal ID */
-  readonly terminalId: string;
-  /** Event data */
-  readonly data: any;
-  /** Message coordinator instance */
-  readonly coordinator?: any;
-  /** Event context (for SystemMessageHandler) */
-  readonly context?: any;
-  /** Event priority (for UnifiedMessageDispatcher) */
-  readonly priority?: 'high' | 'normal' | 'low';
-}
-
-/**
- * Terminal resize options (Parameter Object Pattern)
- * Consolidates parameters for terminal resize operations
- * @see sendResize, debouncedResize functions
- */
-export interface TerminalResizeOptions {
-  /** Number of columns */
-  readonly cols: number;
-  /** Number of rows */
-  readonly rows: number;
-  /** Optional terminal ID (defaults to active terminal) */
-  readonly terminalId?: string;
-  /** Message coordinator instance */
-  readonly coordinator?: any;
-  /** Event priority (for UnifiedMessageDispatcher) */
-  readonly priority?: 'high' | 'normal' | 'low';
-  /** Terminal instance (for debouncedResize) */
-  readonly terminal?: any;
-  /** Fit addon instance (for debouncedResize) */
-  readonly fitAddon?: any;
-}
-
-/**
- * Terminal persistence add options (Parameter Object Pattern)
- * Consolidates parameters for adding terminal to persistence
- * @see addTerminal in persistence services
- */
-export interface TerminalPersistenceAddOptions {
-  /** Terminal ID */
-  readonly terminalId: string;
-  /** Terminal instance */
-  readonly terminal: any;
-  /** Serialize addon for xterm */
-  readonly serializeAddon: any;
-  /** Additional options */
-  readonly options?: {
-    readonly force?: boolean;
-    readonly skipValidation?: boolean;
-  };
-}
-
-/**
- * Configuration update options (Parameter Object Pattern)
- * Consolidates parameters for configuration updates
- * @see update method in configuration services
- */
-export interface ConfigurationUpdateOptions {
-  /** Configuration section (e.g., 'secondaryTerminal') */
-  readonly section: string;
-  /** Configuration key */
-  readonly key: string;
-  /** New value */
-  readonly value: any;
-  /** Configuration target scope */
-  readonly target?: any;
-}
-
-/**
- * Event handler registration options (Parameter Object Pattern)
- * Consolidates parameters for event handler registration
- * @see registerEventHandler, addEventListener functions
- */
-export interface EventHandlerRegistrationOptions {
-  /** Unique identifier for this handler */
-  readonly id?: string;
-  /** DOM element or event target */
-  readonly element: EventTarget | HTMLElement;
-  /** Event type (e.g., 'click', 'keydown') */
-  readonly eventType: string;
-  /** Event handler function */
-  readonly handler: EventListener | ((event: Event) => void);
-  /** Event listener options */
-  readonly options?: AddEventListenerOptions | boolean;
-  /** Enable debouncing for this event */
-  readonly enableDebounce?: boolean;
-  /** Debounce delay in milliseconds */
-  readonly debounceDelay?: number;
-}
-
-/**
- * Terminal link opening options (Parameter Object Pattern)
- * Consolidates parameters for opening files from terminal links
- * @see openFileFromTerminal in TerminalLinkManager
- */
-export interface TerminalLinkOpenOptions {
-  /** File path to open */
-  readonly filePath: string;
-  /** Line number to navigate to */
-  readonly lineNumber?: number;
-  /** Column number to navigate to */
-  readonly columnNumber?: number;
-  /** Terminal ID where link was clicked */
-  readonly terminalId: string;
-}
-
-/**
- * Rendering optimizer setup options (Parameter Object Pattern)
- * Consolidates parameters for setting up rendering optimizations
- * @see setupOptimizedResize, setupRenderingOptimizer functions
- */
-export interface RenderingOptimizerOptions {
-  /** Terminal ID */
-  readonly terminalId: string;
-  /** XTerm terminal instance */
-  readonly terminal: any;
-  /** Fit addon instance */
-  readonly fitAddon: any;
-  /** Container element */
-  readonly container: HTMLElement;
-  /** Enable GPU acceleration */
-  readonly enableGpuAcceleration?: boolean;
-}
-
-/**
- * Status update options (Parameter Object Pattern)
- * Consolidates parameters for CLI Agent status updates
- * @see sendStatusUpdate in CliAgentWebViewService
- */
-export interface CliAgentStatusUpdateOptions {
-  /** Active terminal name */
-  readonly activeTerminalName: string;
-  /** Agent status */
-  readonly status: 'connected' | 'disconnected' | 'none';
-  /** Agent type */
-  readonly agentType: string | null;
-  /** Status update context */
-  readonly context?: any;
-}
-
 // ===== Type Guard Functions =====
-
-/**
- * Type guard for BaseTerminalConfig
- */
-export function isBaseTerminalConfig(obj: unknown): obj is BaseTerminalConfig {
-  return typeof obj === 'object' && obj !== null;
-}

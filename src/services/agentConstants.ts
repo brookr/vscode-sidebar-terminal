@@ -2,7 +2,7 @@ import type { AgentType } from '../types/shared';
 
 export const NOTIFICATION_TITLE = 'Sidebar Terminal';
 
-export const AGENT_DISPLAY_NAMES: Record<string, string> = {
+const AGENT_DISPLAY_NAMES: Record<string, string> = {
   claude: 'Claude',
   copilot: 'GitHub Copilot',
   gemini: 'Gemini',

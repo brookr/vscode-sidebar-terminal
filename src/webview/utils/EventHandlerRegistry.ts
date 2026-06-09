@@ -7,14 +7,14 @@
 
 import { webview as log } from '../../utils/logger';
 
-export interface EventListenerConfig {
+interface EventListenerConfig {
   element: EventTarget;
   type: string;
   listener: EventListener;
   options?: boolean | AddEventListenerOptions;
 }
 
-export interface RegisteredEventListener extends EventListenerConfig {
+interface RegisteredEventListener extends EventListenerConfig {
   key: string;
   registeredAt: number;
 }
@@ -225,7 +225,7 @@ export class EventHandlerRegistry implements Disposable {
 /**
  * Scoped event registry that automatically prefixes all keys
  */
-export class ScopedEventRegistry {
+class ScopedEventRegistry {
   constructor(
     private registry: EventHandlerRegistry,
     private prefix: string
@@ -270,4 +270,3 @@ export class ScopedEventRegistry {
 }
 
 // Create a global instance for convenience
-export const globalEventRegistry = new EventHandlerRegistry();

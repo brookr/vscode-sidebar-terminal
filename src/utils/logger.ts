@@ -260,25 +260,13 @@ export const terminal = (...args: unknown[]): void => logger.terminal(...args);
 export const webview = (...args: unknown[]): void => logger.webview(...args);
 export const provider = (...args: unknown[]): void => logger.provider(...args);
 export const extension = (...args: unknown[]): void => logger.extension(...args);
-export const performance = (...args: unknown[]): void => logger.performance(...args);
-export const message = (...args: unknown[]): void => logger.message(...args);
 export const ui = (...args: unknown[]): void => logger.ui(...args);
-export const config = (...args: unknown[]): void => logger.config(...args);
 export const input = (...args: unknown[]): void => logger.input(...args);
-export const output = (...args: unknown[]): void => logger.output(...args);
-export const debug_category = (...args: unknown[]): void => logger.debug_category(...args);
-export const file = (...args: unknown[]): void => logger.file(...args);
-export const network = (...args: unknown[]): void => logger.network(...args);
 export const state = (...args: unknown[]): void => logger.state(...args);
 export const scrollback = (...args: unknown[]): void => logger.scrollback(...args);
 
 // Categorized logging - INFO level
-export const session = (...args: unknown[]): void => logger.session(...args);
 export const lifecycle = (...args: unknown[]): void => logger.lifecycle(...args);
-export const success = (...args: unknown[]): void => logger.success(...args);
-export const startup = (...args: unknown[]): void => logger.startup(...args);
-export const agent = (...args: unknown[]): void => logger.agent(...args);
-
 // Categorized logging - WARN/ERROR level
 export const error_category = (...args: unknown[]): void => logger.error_category(...args);
 export const warning_category = (...args: unknown[]): void => logger.warning_category(...args);

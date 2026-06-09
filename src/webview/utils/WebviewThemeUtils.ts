@@ -30,4 +30,4 @@ export function getWebviewTheme(settings?: { theme?: string }): TerminalTheme {
 }
 
 // Re-export for backward compatibility
-export { TerminalTheme, DARK_THEME, LIGHT_THEME, THEME_UI_COLORS };
+export { TerminalTheme };

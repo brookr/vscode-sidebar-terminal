@@ -1,16 +1,4 @@
 /**
- * WebView terminal constants
- * Using shared constants from src/shared/constants.ts
- */
-import { SHARED_TERMINAL_COMMANDS, SHARED_DELAYS, SHARED_SIZES } from '../../shared/constants';
-
-export const TERMINAL_CONSTANTS = {
-  COMMANDS: SHARED_TERMINAL_COMMANDS,
-  DELAYS: SHARED_DELAYS,
-  SIZES: SHARED_SIZES,
-} as const;
-
-/**
  * Theme constants
  * @deprecated Import from types/theme.types.ts
  */
@@ -56,16 +44,3 @@ export const SAMPLE_ICONS = [
   { icon: '🗑️', title: 'Kill Terminal (Use panel button)' },
   { icon: '⚙️', title: 'Settings (Use panel button)' },
 ] as const;
-
-export const CSS_CLASSES = {
-  STATUS: 'status',
-  STATUS_INFO: 'status-info',
-  STATUS_SUCCESS: 'status-success',
-  STATUS_ERROR: 'status-error',
-  STATUS_WARNING: 'status-warning',
-  SAMPLE_ICON: 'sample-icon',
-  SAMPLE_ICONS: 'sample-icons',
-  HELP_TOOLTIP: 'help-tooltip',
-  TERMINAL_TAB: 'terminal-tab',
-  SPLIT_CONTAINER: 'split-terminal-container',
-} as const;

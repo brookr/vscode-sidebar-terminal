@@ -11,23 +11,6 @@ import {
   TIMING_CONSTANTS,
   UI_CONSTANTS,
 } from '../../constants/SystemConstants';
-
-export const WEBVIEW_TERMINAL_CONSTANTS = {
-  TERMINAL_REMOVE_DELAY: TERMINAL_CONSTANTS.TERMINAL_REMOVE_DELAY_MS,
-  COMMANDS: {
-    READY: 'ready',
-    INIT: 'init',
-    INPUT: 'input',
-    OUTPUT: 'output',
-    RESIZE: 'resize',
-    EXIT: 'exit',
-    SPLIT: 'split',
-    TERMINAL_CREATED: 'terminalCreated',
-    TERMINAL_REMOVED: 'terminalRemoved',
-    FOCUS_TERMINAL: 'focusTerminal',
-  },
-};
-
 export const SPLIT_CONSTANTS = {
   MAX_SPLIT_COUNT: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,
   MAX_TERMINALS: TERMINAL_CONSTANTS.MAX_TERMINAL_COUNT,

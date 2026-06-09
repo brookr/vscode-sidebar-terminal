@@ -24,7 +24,7 @@ import { BaseManager } from './BaseManager';
 /**
  * Event handler callbacks for terminal container
  */
-export interface TerminalContainerCallbacks {
+interface TerminalContainerCallbacks {
   onHeaderClick: (terminalId: string) => void;
   onContainerClick: (terminalId: string) => void;
   onCloseClick: (terminalId: string) => void;

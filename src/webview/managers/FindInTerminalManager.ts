@@ -24,17 +24,11 @@ const FindTimings = {
   SEARCH_DEBOUNCE_MS: 150,
 } as const;
 
-export interface FindOptions {
+interface FindOptions {
   caseSensitive: boolean;
   wholeWord: boolean;
   regex: boolean;
   backwards: boolean;
-}
-
-export interface FindResult {
-  found: boolean;
-  matchIndex: number;
-  totalMatches: number;
 }
 
 /**

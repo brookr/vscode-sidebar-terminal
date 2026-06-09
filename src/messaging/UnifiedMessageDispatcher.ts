@@ -31,7 +31,7 @@ export interface IMessageHandlerContext {
 }
 
 // Message processing statistics
-export interface IMessageStats {
+interface IMessageStats {
   queueSize: number;
   highPriorityQueueSize: number;
   isProcessing: boolean;
@@ -43,7 +43,7 @@ export interface IMessageStats {
 }
 
 // Message dispatch result
-export interface IDispatchResult {
+interface IDispatchResult {
   success: boolean;
   handledBy?: string;
   processingTime: number;

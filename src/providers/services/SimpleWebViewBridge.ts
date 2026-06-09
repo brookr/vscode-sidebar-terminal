@@ -18,7 +18,7 @@ import { provider as log } from '../../utils/logger';
 /**
  * Terminal configuration sent to WebView
  */
-export interface SimpleTerminalConfig {
+interface SimpleTerminalConfig {
   fontFamily?: string;
   fontSize?: number;
   lineHeight?: number;
@@ -30,7 +30,7 @@ export interface SimpleTerminalConfig {
 /**
  * Terminal ready info from WebView
  */
-export interface TerminalReadyInfo {
+interface TerminalReadyInfo {
   terminalId: string;
   cols: number;
   rows: number;
@@ -39,7 +39,7 @@ export interface TerminalReadyInfo {
 /**
  * Message types from WebView
  */
-export type WebViewMessage =
+type WebViewMessage =
   | { command: 'webviewReady'; timestamp?: number }
   | { command: 'terminalReady'; terminalId: string; cols: number; rows: number; timestamp?: number }
   | { command: 'terminalCreationFailed'; terminalId: string; error: string; timestamp?: number }
@@ -53,7 +53,7 @@ export type WebViewMessage =
 /**
  * Callback handlers for WebView events
  */
-export interface SimpleWebViewCallbacks {
+interface SimpleWebViewCallbacks {
   onWebViewReady: () => void;
   onTerminalReady: (info: TerminalReadyInfo) => void;
   onTerminalCreationFailed: (terminalId: string, error: string) => void;

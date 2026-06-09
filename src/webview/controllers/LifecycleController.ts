@@ -65,7 +65,7 @@ export interface AddonLoadOptions {
   required?: boolean;
 }
 
-export interface ILifecycleController {
+interface ILifecycleController {
   attachTerminal(terminalId: string, terminal: Terminal): void;
   detachTerminal(terminalId: string): void;
   loadAddonLazy<T extends ITerminalAddon>(

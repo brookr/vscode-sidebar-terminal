@@ -28,7 +28,7 @@ interface IUIManager {
   headerElementsCache?: Map<string, TerminalHeaderElements>;
 }
 
-export interface IDependencies {
+interface IDependencies {
   splitManager: SplitManager;
   coordinator: Pick<
     IManagerCoordinator,

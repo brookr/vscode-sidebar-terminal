@@ -11,8 +11,6 @@
 export * from './protocols/MessageProtocol';
 
 // DTOs
-export * from './dto/TerminalDTO';
-export * from './dto/SettingsDTO';
 export * from './dto/SessionDTO';
 
 // Interfaces

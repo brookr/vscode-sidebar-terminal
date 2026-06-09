@@ -30,7 +30,7 @@ import { webview as log } from '../../utils/logger';
 /**
  * Font settings change event
  */
-export interface FontSettingsChangeEvent {
+interface FontSettingsChangeEvent {
   readonly previousSettings: WebViewFontSettings;
   readonly newSettings: WebViewFontSettings;
   readonly timestamp: number;
@@ -39,7 +39,7 @@ export interface FontSettingsChangeEvent {
 /**
  * Font settings change listener
  */
-export type FontSettingsChangeListener = (event: FontSettingsChangeEvent) => void;
+type FontSettingsChangeListener = (event: FontSettingsChangeEvent) => void;
 
 /**
  * Interface for applying font settings to terminals

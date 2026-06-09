@@ -57,7 +57,7 @@ interface IPerformanceManager {
   removeTerminal(terminal: Terminal): void;
 }
 
-export interface IDependencies {
+interface IDependencies {
   terminalOperations: ITerminalOperations;
   terminalLifecycleManager: ITerminalLifecycleManager;
   terminalTabManager?: ITerminalTabManager;

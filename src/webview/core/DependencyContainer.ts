@@ -62,7 +62,7 @@ export enum ServiceLifecycle {
 /**
  * Service registration interface
  */
-export interface ServiceRegistration<T = any> {
+interface ServiceRegistration<T = any> {
   factory: () => T | Promise<T>;
   lifecycle: ServiceLifecycle;
   dependencies: ServiceType[];

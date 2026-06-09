@@ -18,7 +18,7 @@ import { MessageRoutingFacade } from '../services/MessageRoutingFacade';
 /**
  * Handler definition for message routing
  */
-export interface HandlerDefinition {
+interface HandlerDefinition {
   command: string;
   handler: (msg: WebviewMessage) => void | Promise<void>;
   category: 'ui' | 'settings' | 'terminal' | 'persistence' | 'debug';

@@ -9,7 +9,7 @@ import { DisposableStore } from '../utils/DisposableStore';
 /**
  * Feature flag configuration for VS Code standard terminal features
  */
-export interface FeatureFlagConfig {
+interface FeatureFlagConfig {
   // Scrollback features
   enhancedScrollbackPersistence: boolean;
   scrollbackLineLimit: number;

@@ -15,7 +15,7 @@ import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvide
 import { terminal as log } from '../utils/logger';
 import { safeProcessCwd } from '../utils/common';
 
-export interface EnhancedShellCommand {
+interface EnhancedShellCommand {
   command: string;
   cwd: string;
   exitCode?: number;
@@ -25,7 +25,7 @@ export interface EnhancedShellCommand {
   terminalName?: string;
 }
 
-export interface TerminalStatusInfo {
+interface TerminalStatusInfo {
   terminalId: string;
   currentCommand?: string;
   currentCwd: string;

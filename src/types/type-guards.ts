@@ -55,42 +55,12 @@ export function hasInputData(msg: WebviewMessage): msg is WebviewMessage & { dat
 }
 
 // ===== Utility Types =====
-
-/**
- * VS Code event handler types
- */
-export type VSCodeEventHandler<T = unknown> = (event: T) => void | Promise<void>;
-
-/**
- * Configuration value types
- */
-export type ConfigurationValue =
-  | string
-  | number
-  | boolean
-  | string[]
-  | number[]
-  | Record<string, unknown>
-  | null
-  | undefined;
-
 /**
  * Message handler function type
  */
 export type MessageHandler<T extends WebviewMessage = WebviewMessage> = (
   message: T
 ) => Promise<void> | void;
-
-/**
- * Node-pty compatible process type
- */
-export type PtyProcess = import('node-pty').IPty;
-
-/**
- * Node.js process reference
- */
-export type NodeProcess = NodeJS.Process;
-
 // ===== Runtime Type Checkers =====
 
 /**
@@ -114,7 +84,7 @@ export function hasProperty<K extends string, V>(
 /**
  * Type guard for split direction
  */
-export function isSplitDirection(value: unknown): value is 'horizontal' | 'vertical' {
+function isSplitDirection(value: unknown): value is 'horizontal' | 'vertical' {
   return value === 'horizontal' || value === 'vertical';
 }
 
@@ -125,32 +95,6 @@ export function hasDirection(
   msg: WebviewMessage
 ): msg is WebviewMessage & { direction: 'horizontal' | 'vertical' } {
   return hasProperty(msg, 'direction', isSplitDirection);
-}
-
-/**
- * Type guard for boolean values
- */
-export function isBoolean(value: unknown): value is boolean {
-  return typeof value === 'boolean';
-}
-
-/**
- * Type guard for WebviewMessage with force reconnect
- */
-export function hasForceReconnect(
-  msg: WebviewMessage
-): msg is WebviewMessage & { forceReconnect: boolean } {
-  return hasProperty(msg, 'forceReconnect', isBoolean);
-}
-
-/**
- * AI Agent operation result type
- */
-export interface AIAgentOperationResult {
-  success: boolean;
-  reason?: string;
-  newStatus?: 'connected' | 'disconnected' | 'none';
-  agentType?: string | null;
 }
 
 // ===== Manager Interface Extensions =====
@@ -183,49 +127,4 @@ export interface ITerminalWithAddons {
 }
 
 // ===== Terminal Manager Interfaces =====
-
-/**
- * Terminal event data interface
- */
-export interface ITerminalEventData {
-  terminalId: string;
-  data?: string;
-  exitCode?: number;
-  terminal?: ITerminalInstanceForEvents;
-}
-
-/**
- * Terminal instance for events
- */
-export interface ITerminalInstanceForEvents {
-  id: string;
-  name: string;
-  number?: number;
-  isActive: boolean;
-  cwd?: string;
-  isSessionRestored?: boolean;
-  sessionRestoreMessage?: string;
-  sessionScrollback?: string[];
-  pid?: number;
-}
-
-/**
- * Terminal state interface
- */
-export interface ITerminalStateForEvents {
-  terminals: ITerminalInstanceForEvents[];
-  activeTerminalId: string | null;
-  maxTerminals: number;
-  [key: string]: unknown;
-}
-
 // ===== Error Types =====
-
-/**
- * Enhanced error types for better error handling
- */
-export interface ExtensionError extends Error {
-  code?: string;
-  context?: Record<string, unknown>;
-  terminalId?: string;
-}

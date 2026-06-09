@@ -12,7 +12,7 @@ import { terminal as log } from '../../utils/logger';
 /**
  * Plugin registration options
  */
-export interface PluginRegistrationOptions {
+interface PluginRegistrationOptions {
   /** Whether to activate the plugin immediately */
   activateImmediately?: boolean;
   /** Initial plugin configuration */

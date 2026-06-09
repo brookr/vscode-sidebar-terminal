@@ -20,7 +20,7 @@ import {
   IShellIntegrationEvents,
 } from '../addons/ShellIntegrationAddon';
 
-export interface ShellStatus {
+interface ShellStatus {
   terminalId: string;
   status: 'ready' | 'executing' | 'success' | 'error';
   currentCwd?: string;

@@ -8,7 +8,7 @@ import { ISplitLayoutController } from '../interfaces/ISplitLayoutController';
 import { shouldUseGrid } from '../utils/GridLayoutCalculator';
 
 // Re-export TerminalInstance for tests
-export { TerminalInstance };
+export {};
 import { splitLogger } from '../utils/ManagerLogger';
 import { IManagerCoordinator } from '../interfaces/ManagerInterfaces';
 import { DOMUtils } from '../utils/DOMUtils';

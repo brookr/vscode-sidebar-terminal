@@ -30,7 +30,7 @@ interface CommandDefinition {
 /**
  * Dependencies required for command registration
  */
-export interface CommandRegistrarDeps {
+interface CommandRegistrarDeps {
   terminalManager: TerminalManager | undefined;
   sidebarProvider: SecondaryTerminalProvider | undefined;
   extensionPersistenceService: ExtensionPersistenceService | undefined;
@@ -45,7 +45,7 @@ export interface CommandRegistrarDeps {
 /**
  * Session command handlers for complex session operations
  */
-export interface SessionCommandHandlers {
+interface SessionCommandHandlers {
   handleSaveSession: () => Promise<void>;
   handleRestoreSession: () => Promise<void>;
   handleClearSession: () => Promise<void>;

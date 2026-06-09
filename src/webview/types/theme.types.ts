@@ -41,12 +41,6 @@ export interface TerminalTheme {
 }
 
 /**
- * Terminal theme data (alias for backward compatibility)
- * @deprecated Use TerminalTheme instead
- */
-export type TerminalThemeData = TerminalTheme;
-
-/**
  * Theme constants for dark theme
  * Based on VS Code's default dark terminal colors
  * @see https://github.com/microsoft/vscode/blob/main/src/vs/workbench/contrib/terminal/common/terminalColorRegistry.ts

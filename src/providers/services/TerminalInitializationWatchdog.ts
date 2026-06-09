@@ -13,7 +13,7 @@ interface WatchdogEntry {
   options: WatchdogOptions;
 }
 
-export interface WatchdogCallbackInfo {
+interface WatchdogCallbackInfo {
   attempt: number;
   isFinalAttempt: boolean;
 }

@@ -11,7 +11,7 @@ import { TerminalState } from '../../types/shared';
 /**
  * System status snapshot returned by getSystemStatus()
  */
-export interface SystemStatusSnapshot {
+interface SystemStatusSnapshot {
   ready: boolean;
   state: TerminalState | null;
   pendingOperations: {

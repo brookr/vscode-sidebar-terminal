@@ -20,7 +20,7 @@ export enum ErrorCategory {
   UNKNOWN = 'unknown',
 }
 
-export interface ErrorContext {
+interface ErrorContext {
   category: ErrorCategory;
   severity: ErrorSeverity;
   component: string;
@@ -29,7 +29,7 @@ export interface ErrorContext {
   timestamp: number;
 }
 
-export interface ErrorReport {
+interface ErrorReport {
   message: string;
   context: ErrorContext;
   error?: Error;
@@ -37,7 +37,7 @@ export interface ErrorReport {
   recoverable: boolean;
 }
 
-export abstract class BaseError extends Error {
+abstract class BaseError extends Error {
   public readonly context: ErrorContext;
   public readonly recoverable: boolean;
 
@@ -307,9 +307,9 @@ export class ErrorHandlingManager {
   }
 }
 
-export type ErrorHandler = (report: ErrorReport) => void;
+type ErrorHandler = (report: ErrorReport) => void;
 
-export interface ErrorStatistics {
+interface ErrorStatistics {
   total: number;
   byCategory: Record<string, number>;
   bySeverity: Record<string, number>;
@@ -350,5 +350,3 @@ export function withErrorHandling(category: ErrorCategory, component: string, re
     return descriptor;
   };
 }
-
-export const errorManager = ErrorHandlingManager.getInstance();

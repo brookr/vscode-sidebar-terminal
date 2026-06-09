@@ -17,7 +17,7 @@ import { safeProcessCwd } from '../../utils/common';
 /**
  * Terminal information interface for CWD resolution
  */
-export interface TerminalInfo {
+interface TerminalInfo {
   cwd?: string;
 }
 

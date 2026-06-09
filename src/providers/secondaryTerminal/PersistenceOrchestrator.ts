@@ -9,9 +9,9 @@ import {
 import { WebviewMessage } from '../../types/common';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
-export type SendMessageFn = (message: WebviewMessage) => Promise<void>;
+type SendMessageFn = (message: WebviewMessage) => Promise<void>;
 
-export interface PersistenceOrchestratorOptions {
+interface PersistenceOrchestratorOptions {
   extensionContext: vscode.ExtensionContext;
   terminalManager: TerminalManager;
   sendMessage: SendMessageFn;

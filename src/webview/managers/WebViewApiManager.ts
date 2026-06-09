@@ -181,9 +181,3 @@ export class WebViewApiManager {
     log('✅ WebViewApiManager disposed');
   }
 }
-
-/**
- * シングルトンインスタンス
- * WebView全体で共有するAPI管理インスタンス
- */
-export const webViewApiManager = new WebViewApiManager();

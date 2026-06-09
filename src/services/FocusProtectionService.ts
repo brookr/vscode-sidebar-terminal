@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { DisposableStore } from '../utils/DisposableStore';
 import { provider as log, isDebugEnabled } from '../utils/logger';
 
-export interface FocusProtectionDependencies {
+interface FocusProtectionDependencies {
   isTerminalFocused: () => boolean;
   isWebViewVisible: () => boolean;
   /**

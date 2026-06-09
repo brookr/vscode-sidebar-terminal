@@ -24,7 +24,7 @@ import { MessageValidator, createMessageValidator } from './MessageValidator';
 /**
  * Message processor configuration
  */
-export interface IMessageProcessorConfig {
+interface IMessageProcessorConfig {
   /** Coordinator for accessing terminal state */
   coordinator?: IManagerCoordinator;
 
@@ -50,7 +50,7 @@ export interface IMessageProcessorConfig {
 /**
  * Processor statistics
  */
-export interface IProcessorStats extends IRegistryStats {
+interface IProcessorStats extends IRegistryStats {
   readonly isInitialized: boolean;
   readonly registeredCommands: string[];
 }
@@ -317,11 +317,4 @@ export class MessageProcessor {
     this.coordinator = undefined;
     this.logger.info('MessageProcessor', 'Processor disposed');
   }
-}
-
-/**
- * Create a pre-configured message processor
- */
-export function createMessageProcessor(config?: IMessageProcessorConfig): MessageProcessor {
-  return new MessageProcessor(config);
 }

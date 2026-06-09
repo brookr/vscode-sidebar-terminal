@@ -15,7 +15,7 @@ import { WebviewMessage } from '../../../types/common';
 /**
  * Validation error with details
  */
-export class MessageValidationError extends Error {
+class MessageValidationError extends Error {
   constructor(
     message: string,
     public readonly field?: string,
@@ -29,7 +29,7 @@ export class MessageValidationError extends Error {
 /**
  * Validation result
  */
-export interface IValidationResult {
+interface IValidationResult {
   readonly valid: boolean;
   readonly errors: string[];
 }
@@ -37,7 +37,7 @@ export interface IValidationResult {
 /**
  * Message validation rules
  */
-export interface IMessageValidationRule {
+interface IMessageValidationRule {
   /** Fields that must be present */
   required?: string[];
 
@@ -235,7 +235,7 @@ export class MessageValidator {
 /**
  * Default validation rules for common message types
  */
-export const DEFAULT_VALIDATION_RULES: Record<string, IMessageValidationRule> = {
+const DEFAULT_VALIDATION_RULES: Record<string, IMessageValidationRule> = {
   input: {
     required: ['data'],
     types: { data: 'string', terminalId: 'string' },

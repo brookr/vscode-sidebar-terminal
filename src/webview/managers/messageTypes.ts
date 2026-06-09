@@ -1,4 +1,3 @@
-import type { TerminalInteractionEvent } from '../../types/common';
 import { MessagePayload, TerminalMessageData } from '../utils/TypedMessageHandling';
 
 export interface MessageCommand {
@@ -10,10 +9,6 @@ export interface MessageCommand {
     terminalId?: string;
   };
   [key: string]: unknown;
-}
-
-export interface TerminalInteractionEventEmitter {
-  (type: TerminalInteractionEvent['type'], terminalId: string, data: unknown): void;
 }
 
 // Additional exports for test compatibility
@@ -62,4 +57,4 @@ export interface SystemMessage {
 }
 
 // Re-exports for migration
-export { MessagePayload, TerminalMessageData } from '../utils/TypedMessageHandling';
+export { MessagePayload } from '../utils/TypedMessageHandling';

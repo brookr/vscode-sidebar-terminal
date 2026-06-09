@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { WebviewMessage } from '../../types/common';
 
-export type WebviewMessageValidator = (message: unknown) => message is WebviewMessage;
-export type WebviewMessageHandler = (message: WebviewMessage) => Promise<void>;
+type WebviewMessageValidator = (message: unknown) => message is WebviewMessage;
+type WebviewMessageHandler = (message: WebviewMessage) => Promise<void>;
 
 /**
  * MessageBridge ensures we always register WebView listeners before injecting HTML.

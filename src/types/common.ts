@@ -14,7 +14,6 @@ export {
   TerminalInstance,
   AltClickState,
   TerminalInteractionEvent,
-  PartialTerminalSettings,
 
   // Message communication types (in use)
   WebviewMessage,

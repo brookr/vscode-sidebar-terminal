@@ -18,7 +18,7 @@ interface PtyProcess {
   write(data: string): void;
 }
 
-export interface ShellCommand {
+interface ShellCommand {
   command: string;
   cwd: string;
   exitCode?: number;
@@ -26,7 +26,7 @@ export interface ShellCommand {
   timestamp: number;
 }
 
-export interface ShellIntegrationState {
+interface ShellIntegrationState {
   terminalId: string;
   currentCommand?: string;
   currentCwd: string;

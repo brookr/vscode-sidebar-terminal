@@ -18,7 +18,7 @@ interface ITabManager {
   handleTerminalRenamed?(terminalId: string, updatedName: string): void;
 }
 
-export interface IDependencies {
+interface IDependencies {
   splitManager: Pick<SplitManager, 'getTerminals'>;
   coordinator: Pick<
     IManagerCoordinator,

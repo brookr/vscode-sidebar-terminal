@@ -12,7 +12,7 @@ import { GRID_LAYOUT_CONSTANTS } from '../constants/webview';
 /**
  * Grid distribution result
  */
-export interface GridDistribution {
+interface GridDistribution {
   row1: number;
   row2: number;
 }

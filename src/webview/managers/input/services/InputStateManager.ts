@@ -46,7 +46,7 @@ export interface KeyboardState {
 /**
  * Agent interaction state
  */
-export interface AgentInteractionState {
+interface AgentInteractionState {
   isAgentMode: boolean;
   agentType: string | null;
   isAwaitingResponse: boolean;
@@ -57,7 +57,7 @@ export interface AgentInteractionState {
 /**
  * Combined input state
  */
-export interface InputState {
+interface InputState {
   ime: IMECompositionState;
   altClick: AltClickState;
   keyboard: KeyboardState;
@@ -67,11 +67,7 @@ export interface InputState {
 /**
  * State change listener
  */
-export type StateChangeListener<T = any> = (
-  newState: T,
-  previousState: T,
-  stateKey: string
-) => void;
+type StateChangeListener<T = any> = (newState: T, previousState: T, stateKey: string) => void;
 
 /**
  * State validation result

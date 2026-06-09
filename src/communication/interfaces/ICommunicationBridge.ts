@@ -14,7 +14,7 @@ import { Message, MessageProcessingResult } from '../protocols/MessageProtocol';
  * Communication Bridge Interface
  * Provides abstraction for Extension-WebView communication
  */
-export interface ICommunicationBridge {
+interface ICommunicationBridge {
   /**
    * Send a message to the other layer
    * @param message The message to send
@@ -59,24 +59,6 @@ export interface ICommunicationBridge {
    * Dispose of the communication bridge
    */
   dispose(): void;
-}
-
-/**
- * Extension-side communication bridge interface
- * Specific to Extension layer
- */
-export interface IExtensionCommunicationBridge extends ICommunicationBridge {
-  /**
-   * Send message to WebView
-   * @param message The message to send
-   */
-  sendToWebView(message: Message): void;
-
-  /**
-   * Handle message from WebView
-   * @param message The message from WebView
-   */
-  handleFromWebView(message: Message): Promise<MessageProcessingResult>;
 }
 
 /**

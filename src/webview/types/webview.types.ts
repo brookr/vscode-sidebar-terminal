@@ -1,6 +1,4 @@
-import type { CliAgentStatusType } from './terminal.types';
-
-export type { CliAgentStatusType };
+export type {};
 
 export interface HeaderConfig {
   showHeader: boolean;

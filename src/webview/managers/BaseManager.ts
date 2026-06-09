@@ -27,7 +27,7 @@ export interface ManagerInitOptions {
   readonly enableValidation?: boolean;
 }
 
-export interface ManagerPerformanceMetrics {
+interface ManagerPerformanceMetrics {
   readonly initializationTimeMs: number;
   readonly operationCount: number;
   readonly averageOperationTimeMs: number;
@@ -35,7 +35,7 @@ export interface ManagerPerformanceMetrics {
   readonly lastOperationTimestamp: number;
 }
 
-export interface ManagerHealthStatus {
+interface ManagerHealthStatus {
   readonly managerName: string;
   readonly isHealthy: boolean;
   readonly isInitialized: boolean;
@@ -56,7 +56,7 @@ export interface ResourceCleanupResult {
 // ErrorHandlingUtility - 一元化されたエラー処理
 // =============================================================================
 
-export class ManagerErrorHandler {
+class ManagerErrorHandler {
   private errorCount = 0;
   private lastError?: Error;
 
@@ -117,7 +117,7 @@ export class ManagerErrorHandler {
 // PerformanceTracker - パフォーマンス監視
 // =============================================================================
 
-export class ManagerPerformanceTracker {
+class ManagerPerformanceTracker {
   private operationCount = 0;
   private totalOperationTime = 0;
   private lastOperationTimestamp = 0;
@@ -155,7 +155,7 @@ export class ManagerPerformanceTracker {
 // ResourceManager - リソース管理の抽象化
 // =============================================================================
 
-export abstract class ResourceManager {
+abstract class ResourceManager {
   private readonly resources = new Set<() => void>();
 
   protected registerResourceCleanup(cleanupFunction: () => void): void {

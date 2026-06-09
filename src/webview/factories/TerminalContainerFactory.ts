@@ -39,7 +39,7 @@ export interface TerminalHeaderConfig {
   headerEnhancementsEnabled?: boolean;
 }
 
-export interface ContainerElements {
+interface ContainerElements {
   container: HTMLElement;
   header?: HTMLElement;
   body: HTMLElement;

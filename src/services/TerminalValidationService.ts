@@ -70,7 +70,7 @@ export interface ITerminalValidationService {
   };
 }
 
-export interface ValidationConfig {
+interface ValidationConfig {
   maxTerminals: number;
   minTerminals: number;
   maxDataSize: number;

@@ -4,12 +4,12 @@ import { terminal as log } from './logger';
 /**
  * Callback function type for buffer flush events
  */
-export type FlushCallback = (terminalId: string, data: string) => void;
+type FlushCallback = (terminalId: string, data: string) => void;
 
 /**
  * Configuration options for CircularBufferManager
  */
-export interface CircularBufferManagerOptions {
+interface CircularBufferManagerOptions {
   /**
    * Flush interval in milliseconds (default: 16ms for ~60fps)
    */

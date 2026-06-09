@@ -14,13 +14,13 @@ export interface LoggerFunction {
   (message: string, ...args: unknown[]): void;
 }
 
-export interface ValidatedData<T = Record<string, unknown>> {
+interface ValidatedData<T = Record<string, unknown>> {
   readonly data: T;
   readonly isValid: boolean;
   readonly errors: string[];
 }
 
-export interface MessageProcessingResult {
+interface MessageProcessingResult {
   readonly success: boolean;
   readonly command: string;
   readonly processingTimeMs: number;
@@ -239,11 +239,11 @@ export class TypedMessageRouter {
 // TypedMessageSender - 型安全なメッセージ送信クラス
 // =============================================================================
 
-export interface VSCodeWebviewAPI {
+interface VSCodeWebviewAPI {
   postMessage(message: unknown): void;
 }
 
-export interface QueuedMessage {
+interface QueuedMessage {
   readonly command: string;
   readonly data: MessagePayload;
   readonly timestamp: number;
@@ -400,5 +400,3 @@ export const MESSAGE_COMMANDS = {
   NOTIFICATION_SHOW: 'notification:show',
   NOTIFICATION_HIDE: 'notification:hide',
 } as const;
-
-export type MessageCommand = (typeof MESSAGE_COMMANDS)[keyof typeof MESSAGE_COMMANDS];

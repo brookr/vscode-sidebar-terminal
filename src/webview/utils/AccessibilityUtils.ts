@@ -12,7 +12,7 @@ import { webview as log } from '../../utils/logger';
 /**
  * Announces a message to screen readers
  */
-export class ScreenReaderAnnouncer {
+class ScreenReaderAnnouncer {
   private static liveRegion: HTMLElement | null = null;
   private static politeRegion: HTMLElement | null = null;
 

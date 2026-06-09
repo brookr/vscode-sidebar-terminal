@@ -90,6 +90,3 @@ export const PERFORMANCE_CONSTANTS = {
   /** メモリ圧迫の閾値 (100MB) */
   MEMORY_PRESSURE_THRESHOLD_MB: 100,
 } as const;
-
-/** パフォーマンス定数の型 */
-export type PerformanceConstantsType = typeof PERFORMANCE_CONSTANTS;

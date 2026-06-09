@@ -48,7 +48,7 @@ interface PendingCreationRequest {
 /**
  * ターミナル操作に必要な外部依存
  */
-export interface ITerminalOperationsDependencies {
+interface ITerminalOperationsDependencies {
   getActiveTerminalId(): string | null;
   setActiveTerminalId(terminalId: string | null): void;
   getTerminalInstance(terminalId: string): TerminalInstance | undefined;

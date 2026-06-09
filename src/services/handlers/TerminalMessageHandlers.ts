@@ -7,32 +7,32 @@ import { BaseMessageHandler, MessageRouter } from '../MessageRouter';
 import { safeProcessCwd } from '../../utils/common';
 
 // Terminal operation data types
-export interface CreateTerminalData {
+interface CreateTerminalData {
   workingDirectory?: string;
   environmentVariables?: Record<string, string>;
 }
 
-export interface DeleteTerminalData {
+interface DeleteTerminalData {
   terminalId: string;
   force?: boolean;
 }
 
-export interface TerminalInputData {
+interface TerminalInputData {
   terminalId: string;
   input: string;
 }
 
-export interface TerminalResizeData {
+interface TerminalResizeData {
   terminalId: string;
   cols: number;
   rows: number;
 }
 
-export interface FocusTerminalData {
+interface FocusTerminalData {
   terminalId: string;
 }
 
-export interface UpdateSettingsData {
+interface UpdateSettingsData {
   settings: Record<string, unknown>;
 }
 
@@ -191,10 +191,7 @@ export class TerminalResizeHandler extends BaseMessageHandler<
 /**
  * Handler for focusing terminals
  */
-export class FocusTerminalHandler extends BaseMessageHandler<
-  FocusTerminalData,
-  { success: boolean }
-> {
+class FocusTerminalHandler extends BaseMessageHandler<FocusTerminalData, { success: boolean }> {
   constructor(private dependencies: TerminalMessageHandlerDependencies) {
     super('FocusTerminalHandler');
   }
@@ -359,4 +356,3 @@ export class TerminalMessageHandlerFactory {
 }
 
 // Re-export MessageRouter type for external use
-export type { MessageRouter } from '../MessageRouter';

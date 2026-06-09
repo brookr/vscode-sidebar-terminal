@@ -8,7 +8,7 @@ import { webview as log } from '../../utils/logger';
 /**
  * Validation result interface
  */
-export interface ValidationResult {
+interface ValidationResult {
   isValid: boolean;
   error?: string;
   value?: unknown;
@@ -17,7 +17,7 @@ export interface ValidationResult {
 /**
  * Common validation options
  */
-export interface ValidationOptions {
+interface ValidationOptions {
   allowEmpty?: boolean;
   minLength?: number;
   maxLength?: number;

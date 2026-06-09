@@ -6,83 +6,6 @@
 import { log } from './logger';
 
 /**
- * Debounce function for reducing frequent function calls
- */
-export class Debouncer {
-  private timeoutId: number | null = null;
-
-  constructor(
-    private func: (...args: any[]) => void | Promise<void>,
-    private delay: number
-  ) {}
-
-  public execute(...args: any[]): void {
-    if (this.timeoutId !== null) {
-      clearTimeout(this.timeoutId);
-    }
-
-    this.timeoutId = setTimeout(async () => {
-      try {
-        await this.func(...args);
-      } catch (error) {
-        console.error('Debounced function execution failed:', error);
-      }
-      this.timeoutId = null;
-    }, this.delay) as unknown as number;
-  }
-
-  public cancel(): void {
-    if (this.timeoutId !== null) {
-      clearTimeout(this.timeoutId);
-      this.timeoutId = null;
-    }
-  }
-
-  public isScheduled(): boolean {
-    return this.timeoutId !== null;
-  }
-}
-
-/**
- * Batch DOM operations for better performance
- */
-export class DOMBatcher {
-  private operations: (() => void)[] = [];
-  private scheduled = false;
-
-  public add(operation: () => void): void {
-    this.operations.push(operation);
-
-    if (!this.scheduled) {
-      this.scheduled = true;
-      requestAnimationFrame(() => {
-        this.flush();
-      });
-    }
-  }
-
-  private flush(): void {
-    const operations = [...this.operations];
-    this.operations = [];
-    this.scheduled = false;
-
-    // Execute all operations in a single frame
-    operations.forEach((operation) => {
-      try {
-        operation();
-      } catch (error) {
-        console.error('DOM batch operation failed:', error);
-      }
-    });
-  }
-
-  public clear(): void {
-    this.operations = [];
-    this.scheduled = false;
-  }
-}
-
-/**
  * Performance monitoring utilities
  */
 export class PerformanceMonitor {
@@ -133,33 +56,5 @@ export class PerformanceMonitor {
 
   public clearMetrics(): void {
     this.metrics.clear();
-  }
-}
-
-/**
- * Memory usage monitoring
- */
-export class MemoryMonitor {
-  public static getMemoryUsage(): {
-    used: number;
-    total: number;
-    percentage: number;
-  } | null {
-    if ('memory' in performance) {
-      const memory = (performance as any).memory;
-      return {
-        used: Math.round(memory.usedJSHeapSize / 1024 / 1024), // MB
-        total: Math.round(memory.totalJSHeapSize / 1024 / 1024), // MB
-        percentage: Math.round((memory.usedJSHeapSize / memory.totalJSHeapSize) * 100),
-      };
-    }
-    return null;
-  }
-
-  public static logMemoryUsage(context: string): void {
-    const usage = this.getMemoryUsage();
-    if (usage) {
-      log(`🧠 [MEMORY] ${context}: ${usage.used}MB/${usage.total}MB (${usage.percentage}%)`);
-    }
   }
 }

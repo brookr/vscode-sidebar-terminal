@@ -8,7 +8,7 @@ import {
 import { WebviewMessage } from '../../types/common';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
-export interface PanelLocationControllerOptions {
+interface PanelLocationControllerOptions {
   extensionContext: vscode.ExtensionContext;
   terminalManager: TerminalManager;
   sendMessage: (message: WebviewMessage) => Promise<void>;

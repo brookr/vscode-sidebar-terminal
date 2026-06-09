@@ -16,13 +16,13 @@ import { FontSettingsService } from '../services/FontSettingsService';
 import { TerminalInstance, IUIManager, IConfigManager } from '../interfaces/ManagerInterfaces';
 import { ConfigManager } from './ConfigManager';
 
-export interface SettingsState {
+interface SettingsState {
   settings: PartialTerminalSettings;
   fontSettings: WebViewFontSettings;
   timestamp: number;
 }
 
-export interface ISettingsCallbacks {
+interface ISettingsCallbacks {
   getAllTerminalInstances: () => Map<string, TerminalInstance>;
   getAllTerminalContainers: () => Map<string, HTMLElement>;
   getActiveTerminalId: () => string | null;

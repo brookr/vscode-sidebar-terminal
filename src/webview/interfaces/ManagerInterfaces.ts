@@ -194,37 +194,6 @@ export interface IManagerCoordinator {
 }
 
 // Terminal management interface
-export interface ITerminalManager {
-  createTerminal(
-    id: string,
-    name: string,
-    config: PartialTerminalSettings,
-    terminalNumber?: number
-  ): Promise<void>;
-  switchToTerminal(id: string): void;
-  closeTerminal(id?: string): void;
-  handleTerminalRemovedFromExtension(id: string): void;
-  writeToTerminal(data: string, terminalId?: string): void;
-  ensureTerminalFocus(terminalId: string): void;
-  switchToNextTerminal(): void;
-  getTerminal(terminalId: string): TerminalInstance | undefined;
-  getAllTerminals(): Map<string, TerminalInstance>;
-  getTerminalContainer(terminalId: string): HTMLElement | undefined;
-  getAllTerminalContainers(): Map<string, HTMLElement>;
-
-  // セッション復元関連
-  createTerminalFromSession?(
-    id: string,
-    name: string,
-    config: PartialTerminalSettings,
-    restoreMessage: string,
-    scrollbackData: string[]
-  ): void;
-  getTerminalScrollback?(terminalId: string, maxLines: number): string[];
-
-  dispose(): void;
-}
-
 // Performance management interface
 export interface IPerformanceManager {
   scheduleOutputBuffer(data: string, targetTerminal: Terminal): void;
@@ -439,31 +408,8 @@ export interface IFindInTerminalManager {
 }
 
 // Split management support interface (extends existing SplitManager)
-export interface ISplitManagerSupport {
-  prepareSplitMode(direction: 'horizontal' | 'vertical'): void;
-  splitTerminal(direction: 'horizontal' | 'vertical'): void;
-  addNewTerminalToSplit(terminalId: string, terminalName: string): void;
-  getIsSplitMode(): boolean;
-}
-
 // Manager factory interface for dependency injection
-export interface IManagerFactory {
-  createTerminalManager(coordinator: IManagerCoordinator): ITerminalManager;
-  createPerformanceManager(): IPerformanceManager;
-  createInputManager(): IInputManager;
-  createUIManager(): IUIManager;
-  createConfigManager(): IConfigManager;
-  createMessageManager(): IMessageManager;
-  createNotificationManager(): INotificationManager;
-}
-
 // Event emitter interface for manager communication
-export interface IManagerEventEmitter {
-  on(event: string, callback: (...args: unknown[]) => void): void;
-  emit(event: string, ...args: unknown[]): void;
-  off(event: string, callback: (...args: unknown[]) => void): void;
-}
-
 // Manager lifecycle interface
 export interface IManagerLifecycle {
   initialize(config?: unknown): Promise<void> | void;
@@ -471,12 +417,3 @@ export interface IManagerLifecycle {
 }
 
 // Combined manager interface
-export interface IWebViewManager extends IManagerLifecycle {
-  terminalManager: ITerminalManager;
-  performanceManager: IPerformanceManager;
-  inputManager: IInputManager;
-  uiManager: IUIManager;
-  configManager: IConfigManager;
-  messageManager: IMessageManager;
-  notificationManager: INotificationManager;
-}

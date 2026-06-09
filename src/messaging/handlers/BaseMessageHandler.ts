@@ -18,7 +18,7 @@ import {
 import { provider as log } from '../../utils/logger';
 
 // Union type for context to support both Extension and WebView handlers
-export type IMessageHandlerContext =
+type IMessageHandlerContext =
   | WebViewContext
   | {
       logger: {

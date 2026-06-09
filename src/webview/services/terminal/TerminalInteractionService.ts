@@ -14,7 +14,7 @@ interface ICoordinatorDependencies {
   };
 }
 
-export interface IDependencies {
+interface IDependencies {
   coordinator: ICoordinatorDependencies;
   eventRegistry: EventHandlerRegistry;
   lifecycleController: LifecycleController;

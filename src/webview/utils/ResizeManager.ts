@@ -7,11 +7,11 @@
 
 import { webview as log } from '../../utils/logger';
 
-export interface ResizeCallback {
+interface ResizeCallback {
   (): void | Promise<void>;
 }
 
-export interface ResizeOptions {
+interface ResizeOptions {
   delay?: number;
   immediate?: boolean;
   onStart?: () => void;

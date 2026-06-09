@@ -38,20 +38,6 @@ export const SHARED_DELAYS = {
   HOVER_STATUS_DELAY: 1000,
   FADE_DURATION: 200,
 } as const;
-
-/**
- * Shared size constants
- */
-export const SHARED_SIZES = {
-  MIN_TERMINAL_HEIGHT: 100,
-  STATUS_BAR_HEIGHT: 24,
-  HEADER_HEIGHT: 36,
-  TERMINAL_HEADER_HEIGHT: 32,
-  SPLITTER_HEIGHT: 4,
-  MIN_CONTAINER_WIDTH: 200,
-  MIN_CONTAINER_HEIGHT: 100,
-} as const;
-
 /**
  * Shared default values
  */
@@ -71,5 +57,3 @@ export const PLATFORMS = {
   DARWIN: 'darwin',
   LINUX: 'linux',
 } as const;
-
-export type Platform = (typeof PLATFORMS)[keyof typeof PLATFORMS];

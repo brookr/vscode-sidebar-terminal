@@ -45,19 +45,6 @@ export interface DisconnectedAgentInfo {
 }
 
 // =================== Cache and Optimization Types ===================
-
-export interface DetectionCacheEntry {
-  result: CliAgentDetectionResult | null;
-  timestamp: number;
-}
-
-export interface DetectionConfig {
-  debounceMs: number;
-  cacheTtlMs: number;
-  maxBufferSize: number;
-  skipMinimalData: boolean;
-}
-
 // =================== Core Service Interface ===================
 
 /**
@@ -208,49 +195,6 @@ export interface ICliAgentDetectionService {
 }
 
 // =================== Pattern Detection Interface ===================
-
-/**
- * CLI Agent Pattern Detection Interface
- *
- * Responsible for the low-level pattern matching logic for different CLI agents.
- */
-export interface ICliAgentPatternDetector {
-  /**
-   * Detect Claude Code startup patterns
-   * @param cleanLine Cleaned terminal line
-   * @returns True if Claude startup detected
-   */
-  detectClaudeStartup(cleanLine: string): boolean;
-
-  /**
-   * Detect Gemini CLI startup patterns
-   * @param cleanLine Cleaned terminal line
-   * @returns True if Gemini startup detected
-   */
-  detectGeminiStartup(cleanLine: string): boolean;
-
-  /**
-   * Detect GitHub Copilot CLI startup patterns
-   * @param cleanLine Cleaned terminal line
-   * @returns True if GitHub Copilot startup detected
-   */
-  detectCopilotStartup(cleanLine: string): boolean;
-
-  /**
-   * Detect shell prompt return (indicating CLI agent termination)
-   * @param cleanLine Cleaned terminal line
-   * @returns True if shell prompt detected
-   */
-  detectShellPrompt(cleanLine: string): boolean;
-
-  /**
-   * Clean ANSI escape sequences from terminal data
-   * @param text Raw terminal text
-   * @returns Cleaned text without ANSI sequences
-   */
-  cleanAnsiEscapeSequences(text: string): string;
-}
-
 // =================== State Management Interface ===================
 
 /**
@@ -364,20 +308,3 @@ export interface ICliAgentStateManager {
 }
 
 // =================== Configuration Interface ===================
-
-/**
- * CLI Agent Detection Configuration Interface
- */
-export interface ICliAgentDetectionConfig {
-  /**
-   * Get detection configuration
-   * @returns Current detection configuration
-   */
-  getConfig(): DetectionConfig;
-
-  /**
-   * Update detection configuration
-   * @param config New configuration to apply
-   */
-  updateConfig(config: Partial<DetectionConfig>): void;
-}

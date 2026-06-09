@@ -48,7 +48,7 @@ const BufferDefaults = {
 /**
  * Debouncer - Simple debounce utility
  */
-export interface DebouncerOptions {
+interface DebouncerOptions {
   /** Delay in milliseconds before executing */
   delay: number;
   /** If true, execute immediately on first call, then debounce */
@@ -157,7 +157,7 @@ export class Debouncer {
 /**
  * Throttler - Limit execution rate
  */
-export interface ThrottlerOptions {
+interface ThrottlerOptions {
   /** Minimum interval between executions in milliseconds */
   interval: number;
   /** If true, execute on leading edge (default: true) */
@@ -264,7 +264,7 @@ export class Throttler {
 /**
  * EventBuffer - Buffer events and flush in batches
  */
-export interface EventBufferOptions<T> {
+interface EventBufferOptions<T> {
   /** Interval to flush buffer in milliseconds */
   flushInterval: number;
   /** Maximum buffer size before forced flush */
@@ -408,7 +408,7 @@ export class EventBuffer<T> {
 /**
  * KeyedEventBuffer - Buffer events by key with individual flush handling
  */
-export interface KeyedEventBufferOptions<T> {
+interface KeyedEventBufferOptions<T> {
   /** Interval to flush buffer in milliseconds */
   flushInterval: number;
   /** Maximum buffer size per key before forced flush */

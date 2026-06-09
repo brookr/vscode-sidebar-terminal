@@ -42,7 +42,7 @@ export interface IManagerLifecycle {
 /**
  * Registration options for managers
  */
-export interface ManagerRegistrationOptions {
+interface ManagerRegistrationOptions {
   /** If true, manager is created only when first accessed */
   lazy?: boolean;
   /** Manager IDs that must be initialized before this one */

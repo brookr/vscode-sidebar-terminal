@@ -46,7 +46,7 @@ export interface CommandMessage {
 /**
  * Command handler function signature
  */
-export type CommandHandler<T extends CommandMessage = CommandMessage> = (
+type CommandHandler<T extends CommandMessage = CommandMessage> = (
   message: T,
   context?: CommandContext
 ) => void | Promise<void>;
@@ -64,7 +64,7 @@ export interface CommandContext {
 /**
  * Handler registration options
  */
-export interface HandlerOptions {
+interface HandlerOptions {
   /** Execution priority: high (0), normal (50), low (100) */
   priority?: 'high' | 'normal' | 'low';
   /** Category for grouping related commands */

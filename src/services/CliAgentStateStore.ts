@@ -4,7 +4,7 @@ import type { AgentType } from '../types/shared';
 
 export type AgentStatus = 'connected' | 'disconnected' | 'none';
 
-export interface AgentState {
+interface AgentState {
   terminalId: string;
   status: AgentStatus;
   agentType: AgentType | null;
@@ -15,20 +15,20 @@ export interface AgentState {
   startTime?: Date;
 }
 
-export interface DisconnectedAgentInfo {
+interface DisconnectedAgentInfo {
   type: AgentType;
   startTime: Date;
   terminalName?: string;
 }
 
-export interface StateChangeEvent {
+interface StateChangeEvent {
   terminalId: string;
   status: AgentStatus;
   type: AgentType | null;
   terminalName?: string;
 }
 
-export type StateChangeObserver = (event: StateChangeEvent) => void;
+type StateChangeObserver = (event: StateChangeEvent) => void;
 
 export class CliAgentStateStore {
   private readonly agentStates = new Map<string, AgentState>();

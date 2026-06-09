@@ -26,7 +26,7 @@ export enum LogLevel {
 /**
  * Log entry
  */
-export interface ILogEntry {
+interface ILogEntry {
   readonly level: LogLevel;
   readonly timestamp: number;
   readonly source: string;
@@ -37,7 +37,7 @@ export interface ILogEntry {
 /**
  * Logger configuration
  */
-export interface ILoggerConfig {
+interface ILoggerConfig {
   /** Minimum log level to output */
   minLevel: LogLevel;
 
@@ -294,7 +294,7 @@ export class MessageLogger {
 /**
  * Child logger that automatically prefixes sources
  */
-export class ChildMessageLogger {
+class ChildMessageLogger {
   constructor(
     private readonly parent: MessageLogger,
     private readonly sourcePrefix: string
@@ -323,12 +323,3 @@ export class ChildMessageLogger {
 export function createMessageLogger(config?: Partial<ILoggerConfig>): MessageLogger {
   return new MessageLogger(config);
 }
-
-/**
- * Singleton message logger instance
- */
-export const messageLogger = createMessageLogger({
-  minLevel: LogLevel.DEBUG,
-  includeTimestamp: true,
-  includeSource: true,
-});

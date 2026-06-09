@@ -50,7 +50,7 @@ export interface PersistenceResult {
   error?: string;
 }
 
-export interface PersistenceConfig {
+interface PersistenceConfig {
   enablePersistentSessions: boolean;
   persistentSessionScrollback: number;
   persistentSessionReviveProcess: string;
@@ -58,7 +58,7 @@ export interface PersistenceConfig {
   persistentSessionExpiryDays: number;
 }
 
-export interface TerminalRestoreData {
+interface TerminalRestoreData {
   id: string;
   originalId: string;
   name: string;

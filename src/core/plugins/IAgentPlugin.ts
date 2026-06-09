@@ -21,20 +21,6 @@ export interface AgentDetectionResult {
 }
 
 /**
- * Agent plugin configuration
- */
-export interface AgentPluginConfig {
-  /** Whether the plugin is enabled */
-  enabled: boolean;
-  /** Detection patterns (regex patterns as strings) */
-  patterns?: string[];
-  /** Minimum confidence threshold (0-1) */
-  confidenceThreshold?: number;
-  /** Detection debounce time in milliseconds */
-  debounceMs?: number;
-}
-
-/**
  * AI Agent Plugin Interface
  *
  * Plugins implementing this interface can detect and coordinate with AI CLI agents.

@@ -11,7 +11,7 @@ export interface TerminalSpawnRequest {
   env: Record<string, string>;
 }
 
-export interface TerminalSpawnResult {
+interface TerminalSpawnResult {
   ptyProcess: pty.IPty;
 }
 

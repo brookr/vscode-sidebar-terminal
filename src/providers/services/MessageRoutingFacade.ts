@@ -6,7 +6,7 @@ import { provider as log } from '../../utils/logger';
 /**
  * Message handler registry for organizing handlers by category
  */
-export interface MessageHandlerRegistry {
+interface MessageHandlerRegistry {
   command: string;
   handler: MessageHandler;
   category?: 'terminal' | 'settings' | 'persistence' | 'ui' | 'debug' | 'other';

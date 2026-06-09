@@ -4,7 +4,7 @@ import { terminal as log } from '../utils/logger';
 
 type InitializationCompleteSender = (terminalCount: number) => Promise<void>;
 
-export interface TerminalInitializationActions {
+interface TerminalInitializationActions {
   initializeTerminal: () => Promise<void>;
   ensureMinimumTerminals: () => void;
   sendInitializationComplete: InitializationCompleteSender;

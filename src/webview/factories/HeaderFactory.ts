@@ -22,7 +22,7 @@ export interface TerminalHeaderElements {
   splitButton?: HTMLButtonElement | null;
 }
 
-export interface HeaderConfig {
+interface HeaderConfig {
   terminalId: string;
   terminalName: string;
   customClasses?: string[];

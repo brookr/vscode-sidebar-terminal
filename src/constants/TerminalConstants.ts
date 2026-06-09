@@ -117,6 +117,3 @@ export const TERMINAL_CONSTANTS = {
     GENERAL_AI: /AI|Assistant|Chat/i,
   },
 } as const;
-
-/** ターミナル定数の型 */
-export type TerminalConstantsType = typeof TERMINAL_CONSTANTS;

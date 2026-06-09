@@ -60,6 +60,3 @@ export const TIMING_CONSTANTS = {
   /** スリープ前の待機時間（ミリ秒） */
   SLEEP_DELAY_MS: 10000,
 } as const;
-
-/** タイミング定数の型 */
-export type TimingConstantsType = typeof TIMING_CONSTANTS;

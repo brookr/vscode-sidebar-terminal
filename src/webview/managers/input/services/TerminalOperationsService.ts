@@ -10,7 +10,7 @@ import { IManagerCoordinator } from '../../../interfaces/ManagerInterfaces';
 /**
  * Terminal interaction event emitter type
  */
-export type TerminalInteractionEmitter = (
+type TerminalInteractionEmitter = (
   type: string,
   terminalId: string,
   data: unknown,

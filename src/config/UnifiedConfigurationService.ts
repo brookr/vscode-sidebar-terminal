@@ -33,7 +33,7 @@ import { terminal as log } from '../utils/logger';
  * Configuration target priority (higher number = higher priority)
  * Following VS Code's ConfigurationTarget pattern
  */
-export enum ConfigurationTarget {
+enum ConfigurationTarget {
   DEFAULT = 0,
   APPLICATION = 1,
   USER = 2,
@@ -45,7 +45,7 @@ export enum ConfigurationTarget {
 /**
  * Configuration change event following VS Code patterns
  */
-export interface ConfigurationChangeEvent {
+interface ConfigurationChangeEvent {
   readonly affectsConfiguration: (section: string, key?: string) => boolean;
   readonly source: ConfigurationTarget;
   readonly changedKeys: string[];
@@ -840,13 +840,5 @@ export class UnifiedConfigurationService implements Disposable {
  * This replaces all previous config manager imports
  */
 export function getUnifiedConfigurationService(): UnifiedConfigurationService {
-  return UnifiedConfigurationService.getInstance();
-}
-
-/**
- * Legacy compatibility helper (to be removed after migration)
- * @deprecated Use getUnifiedConfigurationService() instead
- */
-export function getConfigManager(): UnifiedConfigurationService {
   return UnifiedConfigurationService.getInstance();
 }

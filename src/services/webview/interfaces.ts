@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../types/common';
-import { PartialTerminalSettings, WebViewFontSettings } from '../../types/shared';
 import { TerminalManager } from '../../terminals/TerminalManager';
 
 /**
@@ -35,19 +34,6 @@ export interface IMessageHandler {
 }
 
 /**
- * WebView state manager interface
- */
-export interface IWebViewStateManager {
-  isInitialized(): boolean;
-  setInitialized(value: boolean): void;
-  getCurrentSettings(): PartialTerminalSettings;
-  getCurrentFontSettings(): WebViewFontSettings;
-  getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string };
-  getPanelLocation(): 'sidebar' | 'panel';
-  requestPanelLocationDetection(context: IMessageHandlerContext): void;
-}
-
-/**
  * CLI Agent service interface
  */
 export interface ICliAgentWebViewService {
@@ -59,32 +45,4 @@ export interface ICliAgentWebViewService {
   ): void;
   sendFullStateSync(context: IMessageHandlerContext): void;
   setupListeners(context: IMessageHandlerContext): vscode.Disposable[];
-}
-
-/**
- * Settings manager interface
- */
-export interface IWebViewSettingsManager {
-  getCurrentSettings(): PartialTerminalSettings;
-  getCurrentFontSettings(): WebViewFontSettings;
-  getAltClickSettings(): { altClickMovesCursor: boolean; multiCursorModifier: string };
-  updateSettings(settings: PartialTerminalSettings): Promise<void>;
-  setupConfigurationChangeListeners(context: IMessageHandlerContext): vscode.Disposable;
-}
-
-/**
- * HTML generator interface
- */
-export interface IWebViewHtmlGenerator {
-  generateMainHtml(webview: vscode.Webview): string;
-  generateFallbackHtml(): string;
-  generateErrorHtml(error: unknown): string;
-}
-
-/**
- * Terminal event handler interface
- */
-export interface ITerminalEventHandler {
-  setupEventListeners(context: IMessageHandlerContext): vscode.Disposable[];
-  clearEventListeners(): void;
 }

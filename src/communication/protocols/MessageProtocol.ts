@@ -10,7 +10,7 @@
 /**
  * Base message interface that all messages must implement
  */
-export interface BaseMessage {
+interface BaseMessage {
   /** Unique message identifier */
   messageId?: string;
   /** Timestamp when the message was created */
@@ -23,7 +23,7 @@ export interface BaseMessage {
  * Extension-to-WebView message types
  * Messages sent from Extension layer to WebView layer
  */
-export type ExtensionToWebViewCommand =
+type ExtensionToWebViewCommand =
   | 'output'
   | 'terminalCreated'
   | 'terminalRemoved'
@@ -67,7 +67,7 @@ export type ExtensionToWebViewCommand =
  * WebView-to-Extension message types
  * Messages sent from WebView layer to Extension layer
  */
-export type WebViewToExtensionCommand =
+type WebViewToExtensionCommand =
   | 'init'
   | 'input'
   | 'resize'
@@ -122,7 +122,7 @@ export type WebViewToExtensionCommand =
 /**
  * Message priority levels for queue processing
  */
-export enum MessagePriority {
+enum MessagePriority {
   HIGH = 'high',
   NORMAL = 'normal',
   LOW = 'low',

@@ -91,24 +91,3 @@ export interface SessionDataDTO {
   activeTerminalId?: string;
   workspaceId?: string;
 }
-
-/**
- * Scrollback data DTO
- */
-export interface ScrollbackDataDTO {
-  terminalId: string;
-  lines: string[];
-  totalLines: number;
-  compressed?: boolean;
-}
-
-/**
- * Session restore progress DTO
- */
-export interface SessionRestoreProgressDTO {
-  currentTerminal: number;
-  totalTerminals: number;
-  terminalId: string;
-  status: 'restoring' | 'completed' | 'failed';
-  message?: string;
-}

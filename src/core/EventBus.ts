@@ -32,7 +32,7 @@ export class EventType<T> {
 /**
  * Event handler function
  */
-export type EventHandler<T> = (event: Event<T>) => void | Promise<void>;
+type EventHandler<T> = (event: Event<T>) => void | Promise<void>;
 
 /**
  * Event with metadata

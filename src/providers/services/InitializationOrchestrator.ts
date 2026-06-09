@@ -19,7 +19,7 @@ export enum InitializationPhase {
 /**
  * Initialization result
  */
-export interface InitializationResult {
+interface InitializationResult {
   success: boolean;
   phase: InitializationPhase;
   error?: Error;
