@@ -93,8 +93,9 @@ export class RenderingOptimizer implements Disposable {
 
       try {
         this.resetXtermInlineStyles(terminalId);
+        // fitAddon.fit() repaints the visible buffer on dimension change; an
+        // explicit terminal.refresh() here would be a redundant second repaint.
         fitAddon.fit();
-        terminal.refresh(0, terminal.rows - 1);
         terminalLogger.debug(`✅ Terminal ${terminalId} resized to ${width}x${height}`);
       } catch (error) {
         terminalLogger.error(`❌ Failed to resize terminal ${terminalId}:`, error);

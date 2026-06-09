@@ -645,10 +645,8 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     isProcessing: boolean,
     coordinator: IManagerCoordinator
   ): void {
-    if (isProcessing && !this.canShowProcessingIndicator(terminalId, coordinator)) {
-      return;
-    }
-
+    // The only isProcessing=true caller (markTerminalProcessing) already gated on
+    // canShowProcessingIndicator(); skip the redundant per-output-chunk re-check.
     const managers = coordinator.getManagers?.();
     const uiManager = managers?.ui as
       | {
