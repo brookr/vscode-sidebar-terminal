@@ -5,6 +5,8 @@ import { webview as baseLog } from '../../../../../utils/logger';
 // Mock base logger
 vi.mock('../../../../../utils/logger', () => ({
   webview: vi.fn(),
+  isDebugEnabled: () => true,
+  isInfoEnabled: () => true,
 }));
 
 describe('ManagerLogger', () => {

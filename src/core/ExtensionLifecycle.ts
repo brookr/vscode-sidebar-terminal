@@ -7,8 +7,6 @@ import { FileReferenceCommand, TerminalCommand } from '../commands';
 import { CopilotIntegrationCommand } from '../commands/CopilotIntegrationCommand';
 import { EnhancedShellIntegrationService } from '../services/EnhancedShellIntegrationService';
 import { KeyboardShortcutService } from '../services/KeyboardShortcutService';
-import { TerminalDecorationsService } from '../services/TerminalDecorationsService';
-import { TerminalLinksService } from '../services/TerminalLinksService';
 import { TelemetryService } from '../services/TelemetryService';
 import { CommandRegistrar } from './CommandRegistrar';
 import { SessionLifecycleManager } from './SessionLifecycleManager';
@@ -24,8 +22,6 @@ export class ExtensionLifecycle {
   private copilotIntegrationCommand: CopilotIntegrationCommand | undefined;
   private shellIntegrationService: EnhancedShellIntegrationService | undefined;
   private keyboardShortcutService: KeyboardShortcutService | undefined;
-  private decorationsService: TerminalDecorationsService | undefined;
-  private linksService: TerminalLinksService | undefined;
   private telemetryService: TelemetryService | undefined;
   private _extensionContext: vscode.ExtensionContext | undefined;
 
@@ -153,28 +149,6 @@ export class ExtensionLifecycle {
         };
       }
 
-      // Initialize Phase 8: Terminal Decorations & Links Services
-      try {
-        // Initialize terminal decorations service
-        this.decorationsService = new TerminalDecorationsService();
-
-        // Initialize terminal links service
-        this.linksService = new TerminalLinksService();
-
-        // Connect Phase 8 services to webview provider
-        if (this.decorationsService && this.linksService) {
-          this.sidebarProvider.setPhase8Services(this.decorationsService, this.linksService);
-        }
-
-        // Connect Phase 8 services to terminal manager for data processing
-        if (this.terminalManager) {
-          // Set up data processing for decorations through terminal manager
-          // Note: This will be connected via message passing in the webview
-        }
-      } catch (error) {
-        logger.warn('Phase 8 services unavailable; continuing without decorations/links', error);
-        // Continue without Phase 8 features
-      }
 
       // Initialize SessionLifecycleManager first (needed by CommandRegistrar)
       this.sessionLifecycleManager = new SessionLifecycleManager({
@@ -255,24 +229,38 @@ export class ExtensionLifecycle {
   }
 
   private configureLogger(context: vscode.ExtensionContext): LogLevel {
-    const override = this.resolveLogLevelOverride();
-    if (override !== undefined) {
-      logger.setLevel(override);
-      return override;
+    // Priority: env var override (debugging) > explicit user setting > extension-mode default.
+    const envOverride = this.parseLogLevel(process.env.SECONDARY_TERMINAL_LOG_LEVEL);
+    if (envOverride !== undefined) {
+      logger.setLevel(envOverride);
+      return envOverride;
     }
 
-    if (context.extensionMode === vscode.ExtensionMode.Production) {
-      logger.setLevel(LogLevel.WARN);
-      return LogLevel.WARN;
+    let configured: LogLevel | undefined;
+    try {
+      const inspected = vscode.workspace
+        ?.getConfiguration('secondaryTerminal')
+        ?.inspect<string>('logging.level');
+      const explicit =
+        inspected?.workspaceFolderValue ?? inspected?.workspaceValue ?? inspected?.globalValue;
+      configured = this.parseLogLevel(explicit);
+    } catch {
+      configured = undefined;
+    }
+    if (configured !== undefined) {
+      logger.setLevel(configured);
+      return configured;
     }
 
-    logger.setLevel(LogLevel.INFO);
-    return LogLevel.INFO;
+    const fallback =
+      context.extensionMode === vscode.ExtensionMode.Production ? LogLevel.WARN : LogLevel.INFO;
+    logger.setLevel(fallback);
+    return fallback;
   }
 
-  private resolveLogLevelOverride(): LogLevel | undefined {
-    const rawLevel = process.env.SECONDARY_TERMINAL_LOG_LEVEL?.toLowerCase();
-    switch (rawLevel) {
+  private parseLogLevel(raw: string | undefined): LogLevel | undefined {
+    switch (raw?.toLowerCase()) {
+      case 'trace':
       case 'debug':
         return LogLevel.DEBUG;
       case 'info':
@@ -283,6 +271,7 @@ export class ExtensionLifecycle {
       case 'error':
         return LogLevel.ERROR;
       case 'none':
+      case 'off':
         return LogLevel.NONE;
       default:
         return undefined;
@@ -331,19 +320,6 @@ export class ExtensionLifecycle {
       log('🔧 [EXTENSION] Disposing keyboard shortcut service...');
       this.keyboardShortcutService.dispose();
       this.keyboardShortcutService = undefined;
-    }
-
-    // Dispose Phase 8 services
-    if (this.decorationsService) {
-      log('🔧 [EXTENSION] Disposing terminal decorations service...');
-      this.decorationsService.dispose();
-      this.decorationsService = undefined;
-    }
-
-    if (this.linksService) {
-      log('🔧 [EXTENSION] Disposing terminal links service...');
-      this.linksService.dispose();
-      this.linksService = undefined;
     }
 
     // Dispose terminal manager

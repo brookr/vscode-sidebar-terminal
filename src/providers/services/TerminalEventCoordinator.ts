@@ -6,7 +6,7 @@
  */
 
 import * as vscode from 'vscode';
-import { provider as log } from '../../utils/logger';
+import { provider as log, isDebugEnabled } from '../../utils/logger';
 import { TerminalManager } from '../../terminals/TerminalManager';
 import { TERMINAL_CONSTANTS } from '../../constants';
 import { getTerminalConfig } from '../../utils/common';
@@ -67,18 +67,20 @@ export class TerminalEventCoordinator implements vscode.Disposable {
       const outputAllowed =
         !this._initializationState || this._initializationState.isOutputAllowed(event.terminalId);
 
-      log(
-        '🔍 [EVENT-COORDINATOR] Terminal output received:',
-        event.data.length,
-        'chars, Extension ID:',
-        event.terminalId,
-        '→ WebView ID:',
-        webviewTerminalId,
-        'ready:',
-        outputAllowed,
-        'preview:',
-        JSON.stringify(event.data.substring(0, 50))
-      );
+      if (isDebugEnabled()) {
+        log(
+          '🔍 [EVENT-COORDINATOR] Terminal output received:',
+          event.data.length,
+          'chars, Extension ID:',
+          event.terminalId,
+          '→ WebView ID:',
+          webviewTerminalId,
+          'ready:',
+          outputAllowed,
+          'preview:',
+          JSON.stringify(event.data.substring(0, 50))
+        );
+      }
 
       if (!outputAllowed) {
         this._bufferOutput(webviewTerminalId, event.data);

@@ -426,18 +426,6 @@ describe('ExtensionLifecycle', () => {
       expect(lifecycle.getSidebarProvider()).toBeDefined();
     });
 
-    it('should continue when Phase 8 (decorations/links) services throw', async () => {
-      mocks.decorationsShouldThrow = true;
-      const ctx = createMockContext();
-
-      await expect(lifecycle.activate(ctx)).resolves.toBeUndefined();
-      expect(mocks.loggerWarn).toHaveBeenCalledWith(
-        'Phase 8 services unavailable; continuing without decorations/links',
-        expect.any(Error)
-      );
-      expect(lifecycle.getTerminalManager()).toBeDefined();
-    });
-
     it('should show error message and resolve when TerminalManager throws', async () => {
       mocks.terminalManagerShouldThrow = true;
       const ctx = createMockContext();
@@ -485,8 +473,6 @@ describe('ExtensionLifecycle', () => {
       expect(mocks.saveSimpleSessionOnExit).toHaveBeenCalled();
       expect(mocks.persistenceServiceDispose).toHaveBeenCalled();
       expect(mocks.keyboardShortcutDispose).toHaveBeenCalled();
-      expect(mocks.decorationsServiceDispose).toHaveBeenCalled();
-      expect(mocks.linksServiceDispose).toHaveBeenCalled();
       expect(mocks.terminalManagerDispose).toHaveBeenCalled();
       expect(mocks.sidebarProviderDispose).toHaveBeenCalled();
       expect(mocks.shellIntegrationDispose).toHaveBeenCalled();

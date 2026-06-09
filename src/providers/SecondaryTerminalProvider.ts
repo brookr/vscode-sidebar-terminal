@@ -74,9 +74,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
 
-  // Phase 8 services (typed properly)
-  private _decorationsService?: import('../services/TerminalDecorationsService').TerminalDecorationsService;
-  private _linksService?: import('../services/TerminalLinksService').TerminalLinksService;
 
   // Terminal persistence services
   private _persistenceHandler?: PersistenceMessageHandler;
@@ -948,26 +945,4 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
 
-  public setPhase8Services(
-    decorationsService: import('../services/TerminalDecorationsService').TerminalDecorationsService,
-    linksService: import('../services/TerminalLinksService').TerminalLinksService
-  ): void {
-    this._decorationsService = decorationsService;
-    this._linksService = linksService;
-
-    log('🎨 [PROVIDER] Phase 8 services (Decorations & Links) connected to provider');
-
-    const view = this._lifecycleManager.getView();
-    if (view) {
-      this._sendMessage({
-        command: 'phase8ServicesReady',
-        capabilities: {
-          decorations: true,
-          links: true,
-          navigation: true,
-          accessibility: true,
-        },
-      }).catch((error) => log('❌ [PROVIDER] Failed to send Phase 8 capabilities:', error));
-    }
-  }
 }

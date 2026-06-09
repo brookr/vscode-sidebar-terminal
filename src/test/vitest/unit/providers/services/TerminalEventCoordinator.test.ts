@@ -19,6 +19,7 @@ vi.mock('vscode', () => ({
 // Mock logger
 vi.mock('../../../../../utils/logger', () => ({
   provider: vi.fn(),
+  isDebugEnabled: () => true,
 }));
 
 // Mock UnifiedConfigurationService

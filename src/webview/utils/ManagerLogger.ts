@@ -5,7 +5,7 @@
  * and provide consistent log formatting with manager identification
  */
 
-import { webview as baseLog } from '../../utils/logger';
+import { webview as baseLog, isDebugEnabled, isInfoEnabled } from '../../utils/logger';
 
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
 
@@ -138,6 +138,9 @@ export class ManagerLogger {
    * Core logging method
    */
   private log(level: LogLevel, message: string, data?: unknown): void {
+    // Hot path: skip all formatting + history work when this level is disabled.
+    if (level === 'debug' && !isDebugEnabled()) return;
+    if (level === 'info' && !isInfoEnabled()) return;
     try {
       // Truncate message if too long
       const truncatedMessage =
