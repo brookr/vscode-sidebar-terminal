@@ -15,7 +15,7 @@ node_modules/**
 !node_modules/node-pty/package.json
 !node_modules/node-pty/LICENSE
 !node_modules/node-pty/typings/**
-!node_modules/node-pty/prebuilds/**
+!node_modules/node-pty/prebuilds/darwin-arm64/**
 !node_modules/node-pty/lib/**
 webpack.config.js
 .gitignore
@@ -108,3 +108,30 @@ typedoc.json
 
 # Build artifacts
 *.tsbuildinfo
+
+# Bundled-but-inert dirs and dev configs (not used at runtime; purge from VSIX)
+website/**
+symphony/**
+.codex/**
+.gemini/**
+.husky/**
+.serena/**
+.synapse/**
+.agents/**
+.agent/**
+eslint.config.mjs
+lint-staged.config.cjs
+commitlint.config.cjs
+.versionrc.cjs
+.c8rc.json
+knip.json
+skills-lock.json
+.editorconfig
+.gitattributes
+README.*.md
+CHANGELOG.md
+changelog.md
+
+# Ship only the runtime icon from resources/ (demo media + readme images are dev-only)
+resources/**
+!resources/icon.png

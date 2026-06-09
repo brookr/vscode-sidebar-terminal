@@ -27,7 +27,6 @@
   "exclude": [
     "node_modules",
     ".vscode-test",
-    "src/integration/IntegratedSecondaryTerminalProvider.ts",
     "**/__tests__/**"
   ],
   "include": ["src/**/*"]
