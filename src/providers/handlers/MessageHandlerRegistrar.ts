@@ -163,11 +163,6 @@ export class MessageHandlerRegistrar {
         category: 'terminal',
       },
       {
-        command: 'getTerminalProfiles',
-        handler: async () => await tch.handleGetTerminalProfiles(),
-        category: 'terminal',
-      },
-      {
         command: 'killTerminal',
         handler: async (msg) => await tch.handleKillTerminal(msg),
         category: 'terminal',

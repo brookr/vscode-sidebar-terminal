@@ -70,9 +70,7 @@ describe('KeyboardShortcutService', () => {
     );
 
     terminalManager = {
-      getDefaultProfile: vi.fn().mockReturnValue(null),
       createTerminal: vi.fn().mockReturnValue('terminal-1'),
-      createTerminalWithProfile: vi.fn().mockResolvedValue('terminal-2'),
       setActiveTerminal: vi.fn(),
     };
 
@@ -88,29 +86,13 @@ describe('KeyboardShortcutService', () => {
     service.dispose();
   });
 
-  it('should create terminal with fullscreen display override when no default profile', async () => {
+  it('should create terminal with fullscreen display override', async () => {
     await (service as any).createTerminal();
 
     expect(terminalManager.createTerminal).toHaveBeenCalledWith({
       displayModeOverride: 'fullscreen',
     });
     expect(terminalManager.setActiveTerminal).toHaveBeenCalledWith('terminal-1');
-    expect(webviewProvider.sendMessageToWebview).toHaveBeenCalledWith({
-      command: 'setDisplayMode',
-      mode: 'fullscreen',
-      forceNextCreate: true,
-    });
-  });
-
-  it('should create terminal with fullscreen display override when default profile exists', async () => {
-    terminalManager.getDefaultProfile.mockReturnValue('bash');
-
-    await (service as any).createTerminal();
-
-    expect(terminalManager.createTerminalWithProfile).toHaveBeenCalledWith('bash', {
-      displayModeOverride: 'fullscreen',
-    });
-    expect(terminalManager.setActiveTerminal).toHaveBeenCalledWith('terminal-2');
     expect(webviewProvider.sendMessageToWebview).toHaveBeenCalledWith({
       command: 'setDisplayMode',
       mode: 'fullscreen',

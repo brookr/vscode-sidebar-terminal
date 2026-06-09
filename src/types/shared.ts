@@ -142,15 +142,6 @@ export interface PartialTerminalSettings {
   // 🆕 Issue #148: Dynamic split direction settings
   dynamicSplitDirection?: boolean;
   panelLocation?: 'auto' | 'sidebar' | 'panel';
-  // 🆕 Phase 5: Terminal Profiles System settings
-  profilesWindows?: Record<string, TerminalProfile | null>;
-  profilesLinux?: Record<string, TerminalProfile | null>;
-  profilesOsx?: Record<string, TerminalProfile | null>;
-  defaultProfileWindows?: string | null;
-  defaultProfileLinux?: string | null;
-  defaultProfileOsx?: string | null;
-  inheritVSCodeProfiles?: boolean;
-  enableProfileAutoDetection?: boolean;
 }
 
 /**
@@ -238,110 +229,6 @@ export type TerminalTheme = 'auto' | 'dark' | 'light';
  */
 export type AgentType = 'claude' | 'gemini' | 'codex' | 'copilot' | 'opencode' | 'antigravity';
 
-// ===== Terminal Profile System Types =====
-
-/**
- * Platform types for VS Code terminal profiles
- */
-export type TerminalPlatform = 'windows' | 'linux' | 'osx';
-
-/**
- * Shell profile configuration for VS Code standard compliance
- * Based on VS Code's ITerminalProfile interface
- */
-export interface TerminalProfile {
-  /** Path to the shell executable */
-  path: string;
-  /** Arguments to pass to the shell */
-  args?: string[];
-  /** Override the shell's default working directory */
-  cwd?: string;
-  /** Environment variables to add to the shell session */
-  env?: Record<string, string | null>;
-  /** Icon identifier for this profile */
-  icon?: string;
-  /** Color identifier for this profile */
-  color?: string;
-  /** Whether this profile should be visible in the terminal dropdown */
-  isVisible?: boolean;
-  /** Override the args when the profile is contributed by an extension */
-  overrideName?: boolean;
-  /** Whether to use color in the terminal */
-  useColor?: boolean;
-}
-
-/**
- * Platform-specific terminal profiles collection
- * Follows VS Code's terminal.integrated.profiles.* pattern
- */
-export interface PlatformTerminalProfiles {
-  /** Windows terminal profiles */
-  windows: Record<string, TerminalProfile | null>;
-  /** Linux terminal profiles */
-  linux: Record<string, TerminalProfile | null>;
-  /** macOS terminal profiles */
-  osx: Record<string, TerminalProfile | null>;
-}
-
-/**
- * Default profile settings for each platform
- * Follows VS Code's terminal.integrated.defaultProfile.* pattern
- */
-export interface DefaultProfileSettings {
-  /** Default Windows terminal profile */
-  windows: string | null;
-  /** Default Linux terminal profile */
-  linux: string | null;
-  /** Default macOS terminal profile */
-  osx: string | null;
-}
-
-/**
- * Auto-detection settings for terminal profiles
- */
-export interface ProfileAutoDetectionSettings {
-  /** Enable automatic profile detection */
-  enabled: boolean;
-  /** Paths to search for shell executables */
-  searchPaths: string[];
-  /** Cache detected profiles */
-  useCache: boolean;
-  /** Cache expiration time in milliseconds */
-  cacheExpiration: number;
-}
-
-/**
- * Complete terminal profile system configuration
- * Integrates all profile-related settings
- */
-export interface TerminalProfilesConfig {
-  /** Platform-specific profile definitions */
-  profiles: PlatformTerminalProfiles;
-  /** Default profiles for each platform */
-  defaultProfiles: DefaultProfileSettings;
-  /** Auto-detection configuration */
-  autoDetection: ProfileAutoDetectionSettings;
-  /** Whether to inherit VS Code's terminal profiles */
-  inheritVSCodeProfiles: boolean;
-}
-
-/**
- * Profile selection result
- * Used when resolving which profile to use for new terminals
- */
-export interface ProfileSelectionResult {
-  /** Selected profile configuration */
-  profile: TerminalProfile;
-  /** Name/key of the selected profile */
-  profileName: string;
-  /** Platform for which the profile was selected */
-  platform: TerminalPlatform;
-  /** Whether this was the default profile */
-  isDefault: boolean;
-  /** Selection source (user, default, auto-detected) */
-  source: 'user' | 'default' | 'auto-detected';
-}
-
 // ===== Backward Compatibility Aliases =====
 
 /**
@@ -382,15 +269,6 @@ export const CONFIG_KEYS = {
   SHELL_OSX: 'shell.osx',
   SHELL_LINUX: 'shell.linux',
 
-  // 🆕 Phase 5: Terminal Profile System keys
-  PROFILES_WINDOWS: 'profiles.windows',
-  PROFILES_LINUX: 'profiles.linux',
-  PROFILES_OSX: 'profiles.osx',
-  DEFAULT_PROFILE_WINDOWS: 'defaultProfile.windows',
-  DEFAULT_PROFILE_LINUX: 'defaultProfile.linux',
-  DEFAULT_PROFILE_OSX: 'defaultProfile.osx',
-  INHERIT_VSCODE_PROFILES: 'inheritVSCodeProfiles',
-  ENABLE_PROFILE_AUTO_DETECTION: 'enableProfileAutoDetection',
   ACTIVE_BORDER_MODE: 'activeBorderMode',
 } as const;
 
@@ -612,7 +490,6 @@ export interface WebviewMessage {
     | 'pasteText' // 📋 Clipboard: Paste text from WebView clipboard read
     | 'pasteImage' // 📋 Clipboard: Paste image for Claude Code
     | 'switchAiAgentResponse' // AIエージェント切り替えレスポンス
-    | 'phase8ServicesReady' // Phase 8: Terminal Decorations & Links service ready notification
     | 'htmlScriptTest' // HTML script test message
     | 'webviewReady' // WebView ready notification
     | 'ready' // General ready notification
@@ -622,16 +499,6 @@ export interface WebviewMessage {
     | 'terminalClosed' // Terminal closed notification
     | 'customEvent' // Custom event for extensibility
     | 'error'
-    // Terminal Profile commands
-    | 'getProfiles' // Get available terminal profiles
-    | 'profilesResponse' // Response with available profiles
-    | 'createTerminalWithProfile' // Create terminal with specific profile
-    | 'showProfileSelector' // Show profile selector UI
-    | 'selectProfile' // Profile selected from UI
-    | 'createProfile' // Create new profile
-    | 'updateProfile' // Update existing profile
-    | 'deleteProfile' // Delete profile
-    | 'setDefaultProfile' // Set default profile
     | 'find' // Terminal search functionality
     | 'requestTerminalSerialization' // Request terminal serialization
     | 'terminalSerializationResponse' // Terminal serialization response
@@ -852,40 +719,6 @@ export interface WebviewMessage {
   // 📋 Clipboard operation properties
   text?: string; // Text content for clipboard operations
 
-  // Terminal Profile properties
-  profiles?: Array<{
-    id: string;
-    name: string;
-    description?: string;
-    icon?: string;
-    path: string;
-    args?: string[];
-    env?: Record<string, string>;
-    cwd?: string;
-    color?: string;
-    isDefault?: boolean;
-    source?: 'builtin' | 'user' | 'extension';
-  }>; // Available terminal profiles
-  profileId?: string; // Selected profile ID
-  profile?: {
-    id: string;
-    name: string;
-    description?: string;
-    icon?: string;
-    path: string;
-    args?: string[];
-    env?: Record<string, string>;
-    cwd?: string;
-    color?: string;
-    isDefault?: boolean;
-    source?: 'builtin' | 'user' | 'extension';
-  }; // Profile data for create/update operations
-  profileOptions?: {
-    name?: string;
-    cwd?: string;
-    env?: Record<string, string>;
-    shellArgs?: string[];
-  }; // Profile options for terminal creation
   version?: string; // Extension version information
 }
 

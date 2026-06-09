@@ -7,7 +7,6 @@ import { SerializationMessageHandler } from '../managers/handlers/SerializationM
 import { TerminalLifecycleMessageHandler } from '../managers/handlers/TerminalLifecycleMessageHandler';
 import { SettingsAndConfigMessageHandler } from '../managers/handlers/SettingsAndConfigMessageHandler';
 import { ShellIntegrationMessageHandler } from '../managers/handlers/ShellIntegrationMessageHandler';
-import { ProfileMessageHandler } from '../managers/handlers/ProfileMessageHandler';
 import { SessionMessageController } from '../managers/controllers/SessionMessageController';
 import { CliAgentMessageController } from '../managers/controllers/CliAgentMessageController';
 
@@ -26,7 +25,6 @@ interface HandlerDependencies {
   scrollbackHandler: ScrollbackMessageHandler;
   panelLocationHandler: PanelLocationHandler;
   splitHandler: SplitHandler;
-  profileHandler: ProfileMessageHandler;
   sessionController: SessionMessageController;
   cliAgentController: CliAgentMessageController;
 }
@@ -177,11 +175,6 @@ export class WebviewCoordinator {
 
     this.register(['split', 'setDisplayMode', 'relayoutTerminals'], (message, coordinator) =>
       this.deps.splitHandler.handleMessage(message, coordinator)
-    );
-
-    this.register(
-      ['showProfileSelector', 'profilesUpdated', 'defaultProfileChanged'],
-      (message, coordinator) => this.deps.profileHandler.handleMessage(message, coordinator)
     );
   }
 

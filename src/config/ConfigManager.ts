@@ -5,8 +5,6 @@ import {
   ExtensionTerminalConfig,
   CompleteTerminalSettings,
   CompleteExtensionConfig,
-  TerminalProfile,
-  TerminalProfilesConfig,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
 
@@ -377,111 +375,6 @@ export class ConfigManager {
       return false;
     }
     return this._configCache.has(key);
-  }
-
-  public getTerminalProfilesConfig(): TerminalProfilesConfig {
-    this._ensureInitialized();
-    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-
-    return {
-      profiles: {
-        windows: this.getConfig(section, CONFIG_KEYS.PROFILES_WINDOWS, {}),
-        linux: this.getConfig(section, CONFIG_KEYS.PROFILES_LINUX, {}),
-        osx: this.getConfig(section, CONFIG_KEYS.PROFILES_OSX, {}),
-      },
-      defaultProfiles: {
-        windows: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null),
-        linux: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null),
-        osx: this.getConfig(section, CONFIG_KEYS.DEFAULT_PROFILE_OSX, null),
-      },
-      autoDetection: {
-        enabled: this.getConfig(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
-        searchPaths: [],
-        useCache: true,
-        cacheExpiration: CONFIG_CACHE_CONSTANTS.PROFILE_CACHE_EXPIRATION_MS,
-      },
-      inheritVSCodeProfiles: this.getConfig(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
-    };
-  }
-
-  public getTerminalProfilesForCurrentPlatform(): Record<string, TerminalProfile | null> {
-    this._ensureInitialized();
-    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-
-    const profileKeyMap: Record<string, string> = {
-      win32: CONFIG_KEYS.PROFILES_WINDOWS,
-      darwin: CONFIG_KEYS.PROFILES_OSX,
-    };
-    const profileKey = profileKeyMap[process.platform] || CONFIG_KEYS.PROFILES_LINUX;
-
-    return this.getConfig(section, profileKey, {});
-  }
-
-  public getDefaultTerminalProfile(): string | null {
-    this._ensureInitialized();
-    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-
-    const defaultKeyMap: Record<string, string> = {
-      win32: CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS,
-      darwin: CONFIG_KEYS.DEFAULT_PROFILE_OSX,
-    };
-    const defaultKey = defaultKeyMap[process.platform] || CONFIG_KEYS.DEFAULT_PROFILE_LINUX;
-
-    return this.getConfig(section, defaultKey, null);
-  }
-
-  public getVSCodeTerminalProfiles(): Record<string, TerminalProfile> {
-    this._ensureInitialized();
-
-    const profileKeyMap: Record<string, string> = {
-      win32: 'profiles.windows',
-      darwin: 'profiles.osx',
-    };
-    const profileKey = profileKeyMap[process.platform] || 'profiles.linux';
-
-    const vscodeConfig = vscode.workspace.getConfiguration('terminal.integrated');
-    const vscodeProfiles = vscodeConfig.get<Record<string, unknown>>(profileKey, {});
-
-    const convertedProfiles: Record<string, TerminalProfile> = {};
-
-    for (const [name, profile] of Object.entries(vscodeProfiles)) {
-      if (profile && typeof profile === 'object') {
-        const prof = profile as Record<string, unknown>;
-        if (prof.path) {
-          convertedProfiles[name] = {
-            path: prof.path as string,
-            args: prof.args as string[] | undefined,
-            cwd: prof.cwd as string | undefined,
-            env: prof.env as Record<string, string> | undefined,
-            icon: prof.icon as string | undefined,
-            color: prof.color as string | undefined,
-            isVisible: prof.isVisible !== false,
-            overrideName: prof.overrideName as boolean | undefined,
-            useColor: prof.useColor as boolean | undefined,
-          };
-        }
-      }
-    }
-
-    return convertedProfiles;
-  }
-
-  public isVSCodeProfileInheritanceEnabled(): boolean {
-    this._ensureInitialized();
-    return this.getConfig(
-      CONFIG_SECTIONS.SIDEBAR_TERMINAL,
-      CONFIG_KEYS.INHERIT_VSCODE_PROFILES,
-      true
-    );
-  }
-
-  public isProfileAutoDetectionEnabled(): boolean {
-    this._ensureInitialized();
-    return this.getConfig(
-      CONFIG_SECTIONS.SIDEBAR_TERMINAL,
-      CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION,
-      true
-    );
   }
 
   public getCacheInfo(): { size: number; keys: string[] } {

@@ -736,11 +736,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     );
   }
 
-  public selectProfile(): void {
-    log('👤 [PROVIDER] Opening profile selection...');
-    void vscode.commands.executeCommand('workbench.action.terminal.selectDefaultProfile');
-  }
-
   public async killTerminal(): Promise<void> {
     return this._killService.killTerminal();
   }

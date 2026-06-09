@@ -27,7 +27,6 @@ import {
   IMessageManager,
   INotificationManager,
   IFindInTerminalManager,
-  IProfileManager,
   ITerminalTabManager,
   ITerminalContainerManager,
   IDisplayModeManager,
@@ -97,7 +96,6 @@ import { CliAgentStateManager } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
 import { FindInTerminalManager } from './FindInTerminalManager';
-import { ProfileManager } from './ProfileManager';
 import { TerminalContainerManager } from './TerminalContainerManager';
 import { DisplayModeManager } from './DisplayModeManager';
 import { HeaderManager } from './HeaderManager';
@@ -138,7 +136,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private _onWindowBlur: (() => void) | null = null;
   public shellIntegrationManager: IShellIntegrationBridge;
   public findInTerminalManager: FindInTerminalManager;
-  public profileManager: ProfileManager;
 
   public terminalTabManager!: TerminalTabManager;
 
@@ -183,7 +180,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
   private currentTerminalState: TerminalState | null = null;
   private currentSettings: PartialTerminalSettings = {};
   private hasProcessedInitialState = false;
-  private profileManagerInitTimer: number | null = null;
 
   constructor() {
     log('🚀 RefactoredTerminalWebviewManager initializing...');
@@ -213,7 +209,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.displayModeManager?.showAllTerminalsSplit(),
     });
     this.findInTerminalManager = new FindInTerminalManager();
-    this.profileManager = new ProfileManager();
     try {
       this.shellIntegrationManager = new ShellIntegrationManager();
     } catch (error) {
@@ -260,7 +255,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         terminalLifecycleManager: this.terminalLifecycleManager,
         splitManager: this.splitManager,
         findInTerminalManager: this.findInTerminalManager,
-        profileManager: this.profileManager,
         shellIntegrationManager: this.shellIntegrationManager,
         displayModeManager: this.displayModeManager,
         terminalContainerManager: this.terminalContainerManager,
@@ -532,7 +526,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     this.terminalStateDisplayManager = initializedManagers.terminalStateDisplayManager;
     this.sessionRestoreManager = initializedManagers.sessionRestoreManager;
     this.settingsManager = initializedManagers.settingsManager;
-    this.profileManagerInitTimer = initializedManagers.profileManagerInitTimer;
 
     log('✅ All managers initialized');
   }
@@ -552,7 +545,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         message: this.messageManager,
         notification: this.notificationManager,
         findInTerminal: this.findInTerminalManager,
-        profile: this.profileManager,
         tabs: this.terminalTabManager,
         persistence: (this.persistenceManager as IPersistenceManager | null) ?? undefined,
         terminalContainer: this.terminalContainerManager,
@@ -706,7 +698,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     message: IMessageManager;
     notification: INotificationManager;
     findInTerminal?: IFindInTerminalManager;
-    profile?: IProfileManager;
     tabs?: ITerminalTabManager;
     persistence?: IPersistenceManager;
     terminalContainer?: ITerminalContainerManager;
@@ -1334,11 +1325,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     log('🧹 Disposing RefactoredTerminalWebviewManager...');
 
     try {
-      if (this.profileManagerInitTimer !== null) {
-        window.clearTimeout(this.profileManagerInitTimer);
-        this.profileManagerInitTimer = null;
-      }
-
       // 設定を保存
       this.saveSettings();
 
@@ -1358,7 +1344,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       this.terminalLifecycleManager.dispose();
       this.webViewApiManager.dispose();
       this.findInTerminalManager.dispose();
-      this.profileManager.dispose();
       this.terminalTabManager.dispose();
 
       // 🆕 新規マネージャーのクリーンアップ（Issue #198）

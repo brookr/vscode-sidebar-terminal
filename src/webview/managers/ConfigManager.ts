@@ -114,15 +114,6 @@ export class ConfigManager implements IConfigManager {
     cursorBlink: true,
     enableCliAgentIntegration: true,
     enableTerminalHeaderEnhancements: true,
-    // Terminal profiles (will be populated from VS Code settings)
-    profilesWindows: {},
-    profilesLinux: {},
-    profilesOsx: {},
-    defaultProfileWindows: null,
-    defaultProfileLinux: null,
-    defaultProfileOsx: null,
-    inheritVSCodeProfiles: true,
-    enableProfileAutoDetection: true,
     scrollback: 2000, // Match package.json default
     activeBorderMode: 'multipleOnly',
     bellSound: false,

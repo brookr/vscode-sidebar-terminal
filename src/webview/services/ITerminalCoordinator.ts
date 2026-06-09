@@ -18,7 +18,6 @@ export interface TerminalInfo {
 export interface TerminalCreationOptions {
   readonly initialCommand?: string;
   readonly workingDirectory?: string;
-  readonly profile?: string;
   readonly environmentVariables?: Record<string, string>;
 }
 

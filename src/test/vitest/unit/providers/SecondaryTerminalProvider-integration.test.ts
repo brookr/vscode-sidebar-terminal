@@ -496,11 +496,6 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
       );
     });
 
-    it('should select profile', () => {
-      provider.selectProfile();
-
-      expect(mockExecuteCommand).toHaveBeenCalled();
-    });
   });
 
   describe('CLI Agent Status', () => {

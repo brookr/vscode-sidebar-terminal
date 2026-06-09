@@ -26,7 +26,6 @@ import { SerializationMessageHandler } from './handlers/SerializationMessageHand
 import { TerminalLifecycleMessageHandler } from './handlers/TerminalLifecycleMessageHandler';
 import { SettingsAndConfigMessageHandler } from './handlers/SettingsAndConfigMessageHandler';
 import { ShellIntegrationMessageHandler } from './handlers/ShellIntegrationMessageHandler';
-import { ProfileMessageHandler } from './handlers/ProfileMessageHandler';
 import { ClipboardMessageHandler } from './handlers/ClipboardMessageHandler';
 
 /**
@@ -70,7 +69,6 @@ export class ConsolidatedMessageManager implements IMessageManager {
   private readonly lifecycleHandler: TerminalLifecycleMessageHandler;
   private readonly settingsHandler: SettingsAndConfigMessageHandler;
   private readonly shellIntegrationHandler: ShellIntegrationMessageHandler;
-  private readonly profileHandler: ProfileMessageHandler;
   private readonly clipboardHandler: ClipboardMessageHandler;
 
   // Message command to handler mapping for efficient dispatch
@@ -116,7 +114,6 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.lifecycleHandler = new TerminalLifecycleMessageHandler(this.messageQueue, this.logger);
     this.settingsHandler = new SettingsAndConfigMessageHandler(this.logger);
     this.shellIntegrationHandler = new ShellIntegrationMessageHandler(this.logger);
-    this.profileHandler = new ProfileMessageHandler(this.logger);
     this.clipboardHandler = new ClipboardMessageHandler(this.logger);
 
     // Build message handler registry for O(1) lookup instead of O(n) switch statement
@@ -257,12 +254,6 @@ export class ConsolidatedMessageManager implements IMessageManager {
         this.logger.info(`🔄 [MESSAGE-MANAGER] Routing ${msg.command} to SplitHandler`);
         this.splitHandler.handleMessage(msg, coord);
       })
-    );
-
-    // Profile Management Messages
-    const profileCommands = ['showProfileSelector', 'profilesUpdated', 'defaultProfileChanged'];
-    profileCommands.forEach((cmd) =>
-      registry.set(cmd, (msg, coord) => this.profileHandler.handleMessage(msg, coord))
     );
 
     // Clipboard Messages
@@ -565,7 +556,6 @@ export class ConsolidatedMessageManager implements IMessageManager {
     this.lifecycleHandler.dispose();
     this.settingsHandler.dispose();
     this.shellIntegrationHandler.dispose();
-    this.profileHandler.dispose();
 
     // Clear message handlers
     this.testMessageHandlers = [];

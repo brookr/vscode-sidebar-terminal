@@ -7,7 +7,6 @@ import {
   IInputManager,
   INotificationManager,
   IPerformanceManager,
-  IProfileManager,
   IPersistenceManager,
   ITerminalContainerManager,
   ITerminalTabManager,
@@ -24,7 +23,6 @@ type ManagerGroup = {
   message: IMessageManager;
   notification: INotificationManager;
   findInTerminal?: IFindInTerminalManager;
-  profile?: IProfileManager;
   tabs?: ITerminalTabManager;
   persistence?: IPersistenceManager;
   terminalContainer?: ITerminalContainerManager;

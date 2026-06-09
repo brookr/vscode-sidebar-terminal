@@ -30,7 +30,6 @@ export interface CreateTerminalRequestDTO {
   shellPath?: string;
   shellArgs?: string[];
   env?: Record<string, string>;
-  profileName?: string;
 }
 
 /**

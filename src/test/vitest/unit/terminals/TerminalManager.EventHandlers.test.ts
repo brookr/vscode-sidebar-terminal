@@ -126,27 +126,6 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
       terminalManager.removeTerminal(terminalId);
     });
 
-    it('should register onData handler exactly once in createTerminalWithProfile()', async () => {
-      // Act: Create terminal with profile
-      const terminalId = await terminalManager.createTerminalWithProfile();
-
-      // Assert: Only one data handler should be registered
-      expect(mockPty.getDataHandlerCount()).toBe(1);
-
-      // Cleanup
-      terminalManager.removeTerminal(terminalId);
-    });
-
-    it('should register onExit handler exactly once in createTerminalWithProfile()', async () => {
-      // Act: Create terminal with profile
-      const terminalId = await terminalManager.createTerminalWithProfile();
-
-      // Assert: Only one exit handler should be registered
-      expect(mockPty.getExitHandlerCount()).toBe(1);
-
-      // Cleanup
-      terminalManager.removeTerminal(terminalId);
-    });
   });
 
   describe('RED Phase: Data Event Emission Count', () => {
@@ -251,15 +230,15 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
   });
 
   describe('REFACTOR Phase: Method Consistency', () => {
-    it('should use identical event setup pattern in both create methods', async () => {
-      // Create terminal using both methods
+    it('should use identical event setup pattern across created terminals', () => {
+      // Create first terminal
       const terminal1Id = terminalManager.createTerminal();
 
       // Create new mock PTY for second terminal
       const mockPty2 = new MockPtyProcess();
       spawnStub.mockReturnValue({ ptyProcess: mockPty2 } as any);
 
-      const terminal2Id = await terminalManager.createTerminalWithProfile();
+      const terminal2Id = terminalManager.createTerminal();
 
       // Both should have exactly one handler each
       expect(mockPty.getDataHandlerCount()).toBe(1);

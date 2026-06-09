@@ -41,7 +41,6 @@ describe('WebviewCoordinator', () => {
   let scrollbackHandler: ReturnType<typeof createHandler>;
   let panelHandler: ReturnType<typeof createHandler>;
   let splitHandler: ReturnType<typeof createHandler>;
-  let profileHandler: ReturnType<typeof createHandler>;
   let sessionController: ReturnType<typeof createSessionController>;
   let cliAgentController: ReturnType<typeof createCliAgentController>;
   let logger: {
@@ -59,7 +58,6 @@ describe('WebviewCoordinator', () => {
     scrollbackHandler = createHandler();
     panelHandler = createHandler();
     splitHandler = createHandler();
-    profileHandler = createHandler();
     sessionController = createSessionController();
     cliAgentController = createCliAgentController();
     logger = {
@@ -78,12 +76,10 @@ describe('WebviewCoordinator', () => {
         scrollbackHandler: scrollbackHandler as any,
         panelLocationHandler: panelHandler as any,
         splitHandler: splitHandler as any,
-        profileHandler: profileHandler as any,
         sessionController: sessionController as any,
         cliAgentController: cliAgentController as any,
       },
-      // @ts-expect-error - test mock type
-      logger
+      logger as any
     );
   });
 

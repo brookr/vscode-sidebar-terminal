@@ -15,19 +15,6 @@ export interface ISessionManager {
 }
 
 /**
- * Profile Manager interface for terminal profiles
- */
-export interface IProfileManager {
-  getProfiles(): any[];
-  getDefaultProfile(): any;
-  createProfile(profile: any): any;
-  createTerminalWithProfile(profileId: string, options?: any): any;
-  updateProfile(profileId: string, profile: any): void;
-  deleteProfile(profileId: string): void;
-  setDefaultProfile(profileId: string): void;
-}
-
-/**
  * Context interface for message handlers
  */
 export interface IMessageHandlerContext {
@@ -35,7 +22,6 @@ export interface IMessageHandlerContext {
   terminalManager: TerminalManager;
   webview: vscode.Webview | undefined;
   standardSessionManager?: ISessionManager;
-  profileManager?: IProfileManager;
   sendMessage: (message: WebviewMessage) => Promise<void>;
   terminalIdMapping?: Map<string, string>;
 }

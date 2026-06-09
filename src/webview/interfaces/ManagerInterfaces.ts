@@ -10,7 +10,6 @@ import { Unicode11Addon } from '@xterm/addon-unicode11';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import { AltClickState, TerminalInteractionEvent } from '../../types/common';
-import { ITerminalProfile } from '../../types/profiles';
 import type { IShellIntegrationManager } from '../../types/type-guards';
 
 /**
@@ -130,8 +129,9 @@ export interface IManagerCoordinator {
   closeTerminal(id?: string): void;
   shellIntegrationManager?: IShellIntegrationBridge;
   findInTerminalManager?: IFindInTerminalManager; // Find in Terminal manager
-  profileManager?: IProfileManager; // Profile manager
   inputManager?: IInputManager; // Input management for terminal events
+  /** Public API: request creation of a new terminal */
+  requestNewTerminal?(terminalName?: string): Promise<boolean>;
   getManagers(): {
     performance: IPerformanceManager;
     input: IInputManager;
@@ -140,7 +140,6 @@ export interface IManagerCoordinator {
     message: IMessageManager;
     notification: INotificationManager;
     findInTerminal?: IFindInTerminalManager;
-    profile?: IProfileManager;
     tabs?: ITerminalTabManager;
     persistence?: IPersistenceManager; // Optional persistence manager
     terminalContainer?: ITerminalContainerManager; // Terminal container manager
@@ -439,25 +438,6 @@ export interface IFindInTerminalManager {
   dispose(): void;
 }
 
-// Profile management interface
-export interface IProfileManager {
-  showProfileSelector(onProfileSelected?: (profileId: string) => void): void;
-  hideProfileSelector(): void;
-  getAvailableProfiles(): Promise<ITerminalProfile[]>;
-  getProfile(profileId: string): ITerminalProfile | undefined;
-  getDefaultProfile(): ITerminalProfile | undefined;
-  setDefaultProfile(profileId: string): Promise<void>;
-  refreshProfiles(): Promise<void>;
-  createTerminalWithProfile(profileId: string, name?: string): Promise<void>;
-  createTerminalWithDefaultProfile(name?: string): Promise<void>;
-  switchToProfileByIndex(index: number): Promise<void>;
-  updateProfiles(profiles: ITerminalProfile[], defaultProfileId?: string): void;
-  handleMessage(message: unknown): void;
-  isProfileSelectorVisible(): boolean;
-  getSelectedProfileId(): string | undefined;
-  dispose(): void;
-}
-
 // Split management support interface (extends existing SplitManager)
 export interface ISplitManagerSupport {
   prepareSplitMode(direction: 'horizontal' | 'vertical'): void;
@@ -475,7 +455,6 @@ export interface IManagerFactory {
   createConfigManager(): IConfigManager;
   createMessageManager(): IMessageManager;
   createNotificationManager(): INotificationManager;
-  createProfileManager(): IProfileManager;
 }
 
 // Event emitter interface for manager communication

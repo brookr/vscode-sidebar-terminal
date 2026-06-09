@@ -67,7 +67,6 @@ export interface IInitializedManagerBundle {
   terminalStateDisplayManager: TerminalStateDisplayManager;
   sessionRestoreManager: SessionRestoreManager;
   settingsManager: TerminalSettingsManager;
-  profileManagerInitTimer: number;
 }
 
 export interface ILightweightTerminalInitializationDependencies {
@@ -89,7 +88,6 @@ export interface ILightweightTerminalInitializationDependencies {
   terminalLifecycleManager: ITerminalLifecycleManagerDependencies;
   splitManager: unknown;
   findInTerminalManager: IManagerWithCoordinator;
-  profileManager: IManagerWithCoordinator & { initialize(): Promise<void> };
   shellIntegrationManager: IManagerWithCoordinator;
   displayModeManager: IDisplayModeManagerDependencies;
   terminalContainerManager: ITerminalContainerManagerDependencies;
@@ -161,17 +159,7 @@ export class LightweightTerminalInitializationCoordinator {
     messageManager.setCoordinator(this.dependencies.managerCoordinator);
 
     this.dependencies.findInTerminalManager.setCoordinator(this.dependencies.managerCoordinator);
-    this.dependencies.profileManager.setCoordinator(this.dependencies.managerCoordinator);
     this.dependencies.shellIntegrationManager.setCoordinator(this.dependencies.managerCoordinator);
-
-    const profileManagerInitTimer = this.dependencies.scheduleTimeout(async () => {
-      try {
-        await this.dependencies.profileManager.initialize();
-        log('🎯 ProfileManager async initialization completed');
-      } catch (error) {
-        console.error('❌ ProfileManager initialization failed:', error);
-      }
-    }, 100);
 
     terminalTabManager.initialize();
     this.dependencies.displayModeManager.initialize();
@@ -219,7 +207,6 @@ export class LightweightTerminalInitializationCoordinator {
       terminalStateDisplayManager,
       sessionRestoreManager,
       settingsManager,
-      profileManagerInitTimer,
     };
   }
 

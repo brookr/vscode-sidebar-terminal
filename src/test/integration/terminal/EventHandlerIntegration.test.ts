@@ -387,7 +387,7 @@ describe('Terminal Event Handler Regression Tests', () => {
       this.timeout(5000);
 
       const terminal1 = terminalManager.createTerminal();
-      const terminal2 = await terminalManager.createTerminalWithProfile();
+      const terminal2 = terminalManager.createTerminal();
 
       // Both should receive events
       let terminal1Events = 0;

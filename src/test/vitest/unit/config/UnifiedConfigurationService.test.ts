@@ -669,39 +669,6 @@ describe('UnifiedConfigurationService', () => {
     });
   });
 
-  describe('Configuration Profiles', () => {
-    it('should get terminal profiles configuration', () => {
-      mockWorkspaceConfiguration.get.mockImplementation((key: string, defaultValue: any) => {
-        if (key === CONFIG_KEYS.PROFILES_WINDOWS) return { PowerShell: { path: 'powershell.exe' } };
-        if (key === CONFIG_KEYS.PROFILES_LINUX) return { Bash: { path: '/bin/bash' } };
-        if (key === CONFIG_KEYS.PROFILES_OSX) return { Zsh: { path: '/bin/zsh' } };
-        if (key === CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS) return 'PowerShell';
-        if (key === CONFIG_KEYS.DEFAULT_PROFILE_LINUX) return 'Bash';
-        if (key === CONFIG_KEYS.DEFAULT_PROFILE_OSX) return 'Zsh';
-        if (key === CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION) return false;
-        if (key === CONFIG_KEYS.INHERIT_VSCODE_PROFILES) return true;
-        return defaultValue;
-      });
-
-      const profilesConfig = service.getTerminalProfilesConfig();
-
-      expect(profilesConfig.profiles.windows).toEqual({
-        PowerShell: { path: 'powershell.exe' },
-      });
-      expect(profilesConfig.profiles.linux).toEqual({
-        Bash: { path: '/bin/bash' },
-      });
-      expect(profilesConfig.profiles.osx).toEqual({
-        Zsh: { path: '/bin/zsh' },
-      });
-      expect(profilesConfig.defaultProfiles.windows).toBe('PowerShell');
-      expect(profilesConfig.defaultProfiles.linux).toBe('Bash');
-      expect(profilesConfig.defaultProfiles.osx).toBe('Zsh');
-      expect(profilesConfig.autoDetection.enabled).toBe(false);
-      expect(profilesConfig.inheritVSCodeProfiles).toBe(true);
-    });
-  });
-
   describe('Configuration Validation', () => {
     it('should validate font size within bounds', () => {
       const terminalConfig = { get: vi.fn() };

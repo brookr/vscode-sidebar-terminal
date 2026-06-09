@@ -8,7 +8,6 @@ import {
 } from '../types/shared';
 import { PERFORMANCE_CONSTANTS } from '../constants';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
-import { TerminalProfileService } from '../services/TerminalProfileService';
 import { terminal as log } from '../utils/logger';
 import { getTerminalConfig, ActiveTerminalManager } from '../utils/common';
 import { TerminalNumberManager } from '../utils/TerminalNumberManager';
@@ -49,7 +48,6 @@ export class TerminalManager {
 
   private readonly _terminalNumberManager: TerminalNumberManager;
   private _shellIntegrationService: ShellIntegrationService | null = null;
-  private readonly _profileService: TerminalProfileService;
   private readonly _cliAgentService: ICliAgentDetectionService;
   private readonly _terminalSpawner: TerminalSpawner;
   private readonly _processManager: ITerminalProcessManager;
@@ -92,7 +90,6 @@ export class TerminalManager {
   constructor(cliAgentService?: ICliAgentDetectionService) {
     const config = getTerminalConfig();
     this._terminalNumberManager = new TerminalNumberManager(config.maxTerminals);
-    this._profileService = new TerminalProfileService();
     this._cliAgentService = cliAgentService || new CliAgentDetectionService();
     this._cliAgentService.startHeartbeat();
     this._terminalSpawner = new TerminalSpawner();
@@ -137,7 +134,6 @@ export class TerminalManager {
     this._lifecycleManager = new TerminalLifecycleManager(
       this._terminals,
       this._terminalNumberManager,
-      this._profileService,
       this._terminalSpawner,
       this._cliAgentService,
       this._terminalCreatedEmitter,
@@ -159,13 +155,6 @@ export class TerminalManager {
   }
 
   // === Lifecycle Management ===
-
-  public async createTerminalWithProfile(
-    profileName?: string,
-    overrides?: TerminalCreationOverrides
-  ): Promise<string> {
-    return await this._lifecycleManager.createTerminalWithProfile(profileName, overrides);
-  }
 
   public createTerminal(overrides?: TerminalCreationOverrides): string {
     return this._lifecycleManager.createTerminal(overrides);
@@ -450,18 +439,6 @@ export class TerminalManager {
 
   public clearAiAgentDetectionError(terminalId: string): boolean {
     return this._cliAgentService.clearDetectionError(terminalId);
-  }
-
-  // === Profile Management ===
-
-  public async getAvailableProfiles(): Promise<
-    Record<string, import('../types/shared').TerminalProfile>
-  > {
-    return await this._lifecycleManager.getAvailableProfiles();
-  }
-
-  public getDefaultProfile(): string | null {
-    return this._lifecycleManager.getDefaultProfile();
   }
 
   // === Service Management ===

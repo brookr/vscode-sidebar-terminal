@@ -60,7 +60,6 @@ describe('TerminalMessageHandlers', () => {
     // When
     await expect(
       handler.handle({
-        profile: 'zsh',
         workingDirectory: '/workspace',
         environmentVariables: { FOO: 'bar' },
       })
@@ -68,7 +67,6 @@ describe('TerminalMessageHandlers', () => {
 
     // Then
     expect(dependencies.terminalManager.createTerminal).toHaveBeenCalledWith({
-      profile: 'zsh',
       workingDirectory: '/workspace',
       environmentVariables: { FOO: 'bar' },
     });

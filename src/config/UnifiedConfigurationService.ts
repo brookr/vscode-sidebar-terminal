@@ -25,7 +25,6 @@ import {
   CompleteExtensionConfig,
   WebViewFontSettings,
   WebViewTerminalSettings,
-  TerminalProfilesConfig,
 } from '../types/shared';
 import { TERMINAL_CONSTANTS, CONFIG_CACHE_CONSTANTS } from '../constants/SystemConstants';
 import { terminal as log } from '../utils/logger';
@@ -648,34 +647,6 @@ export class UnifiedConfigurationService implements Disposable {
       log('❌ [UnifiedConfig] Error getting letterSpacing:', error);
       return CONFIG_CACHE_CONSTANTS.DEFAULT_LETTER_SPACING;
     }
-  }
-
-  /**
-   * Get terminal profiles configuration
-   */
-  public getTerminalProfilesConfig(): TerminalProfilesConfig {
-    this.initialize();
-    const section = CONFIG_SECTIONS.SIDEBAR_TERMINAL;
-
-    return {
-      profiles: {
-        windows: this.get(section, CONFIG_KEYS.PROFILES_WINDOWS, {}),
-        linux: this.get(section, CONFIG_KEYS.PROFILES_LINUX, {}),
-        osx: this.get(section, CONFIG_KEYS.PROFILES_OSX, {}),
-      },
-      defaultProfiles: {
-        windows: this.get(section, CONFIG_KEYS.DEFAULT_PROFILE_WINDOWS, null),
-        linux: this.get(section, CONFIG_KEYS.DEFAULT_PROFILE_LINUX, null),
-        osx: this.get(section, CONFIG_KEYS.DEFAULT_PROFILE_OSX, null),
-      },
-      autoDetection: {
-        enabled: this.get(section, CONFIG_KEYS.ENABLE_PROFILE_AUTO_DETECTION, true),
-        searchPaths: [],
-        useCache: true,
-        cacheExpiration: CONFIG_CACHE_CONSTANTS.PROFILE_CACHE_EXPIRATION_MS,
-      },
-      inheritVSCodeProfiles: this.get(section, CONFIG_KEYS.INHERIT_VSCODE_PROFILES, true),
-    };
   }
 
   /**

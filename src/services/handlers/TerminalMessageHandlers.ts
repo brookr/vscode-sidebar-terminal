@@ -8,7 +8,6 @@ import { safeProcessCwd } from '../../utils/common';
 
 // Terminal operation data types
 export interface CreateTerminalData {
-  profile?: string;
   workingDirectory?: string;
   environmentVariables?: Record<string, string>;
 }
@@ -87,7 +86,6 @@ export class CreateTerminalHandler extends BaseMessageHandler<
 
     try {
       const terminalId = await this.dependencies.terminalManager.createTerminal({
-        profile: data.profile,
         workingDirectory: data.workingDirectory,
         environmentVariables: data.environmentVariables,
       });

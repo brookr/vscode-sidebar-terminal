@@ -77,11 +77,9 @@ describe('TelemetryService', () => {
   });
 
   it('should track terminal created without sensitive info', () => {
-    service.trackTerminalCreated('term-123', 'My Profile');
+    service.trackTerminalCreated('term-123');
 
-    expect(mockLogger.logUsage).toHaveBeenCalledWith(TelemetryEventType.TerminalCreated, {
-      hasProfile: true,
-    });
+    expect(mockLogger.logUsage).toHaveBeenCalledWith(TelemetryEventType.TerminalCreated, {});
     // Ensure no sensitive data
     expect(mockLogger.logUsage).not.toHaveBeenCalledWith(
       expect.anything(),

@@ -28,9 +28,8 @@ export interface IDependencies {
     | 'getManagers'
     | 'deleteTerminalSafely'
     | 'handleAiAgentToggle'
-  > & {
-    profileManager?: IManagerCoordinator['profileManager'];
-  };
+    | 'requestNewTerminal'
+  >;
 }
 
 const ElementIds = {
@@ -200,7 +199,7 @@ export class TerminalDomService {
       },
       onSplitClick: () => {
         terminalLogger.info('⊞ Split button clicked, creating new terminal');
-        void this.dependencies.coordinator.profileManager?.createTerminalWithDefaultProfile?.();
+        void this.dependencies.coordinator.requestNewTerminal?.();
       },
       onAiAgentToggleClick: (clickedTerminalId) => {
         terminalLogger.info(`📎 AI Agent toggle clicked for terminal: ${clickedTerminalId}`);

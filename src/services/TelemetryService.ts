@@ -169,10 +169,9 @@ export class TelemetryService {
   /**
    * Track terminal creation
    */
-  public trackTerminalCreated(terminalId: string, profileName?: string): void {
+  public trackTerminalCreated(_terminalId: string): void {
     this.telemetryLogger.logUsage(TelemetryEventType.TerminalCreated, {
-      hasProfile: !!profileName,
-      // Note: We don't send terminalId or profileName to respect privacy
+      // Note: We don't send terminalId to respect privacy
     });
   }
 

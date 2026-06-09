@@ -323,12 +323,6 @@ export class CommandRegistrar {
         },
       },
       {
-        command: 'secondaryTerminal.selectProfile',
-        handler: () => {
-          this.deps.sidebarProvider?.selectProfile();
-        },
-      },
-      {
         command: 'secondaryTerminal.openSettings',
         handler: () => {
           this.deps.sidebarProvider?.openSettings();

@@ -21,7 +21,6 @@ import { SplitDirection } from './PanelLocationService';
 import { WebViewCommunicationService } from './WebViewCommunicationService';
 import { TerminalLinkResolver } from './TerminalLinkResolver';
 import { getUnifiedConfigurationService } from '../../config/UnifiedConfigurationService';
-import { ITerminalProfile } from '../../types/profiles';
 
 /**
  * Dependencies required by TerminalCommandHandlers
@@ -378,54 +377,6 @@ export class TerminalCommandHandlers {
       `🔗 [HANDLER] openTerminalLink received: type=${message.linkType} url=${message.url ?? ''} file=${message.filePath ?? ''} terminal=${message.terminalId ?? ''}`
     );
     await this.deps.linkResolver.handleOpenTerminalLink(message);
-  }
-
-  /**
-   * Handle get terminal profiles command
-   */
-  public async handleGetTerminalProfiles(): Promise<void> {
-    try {
-      const configService = getUnifiedConfigurationService();
-      const profilesConfig = configService.getTerminalProfilesConfig();
-
-      const platform: 'windows' | 'linux' | 'osx' =
-        process.platform === 'win32' ? 'windows' : process.platform === 'darwin' ? 'osx' : 'linux';
-
-      const platformProfiles = profilesConfig.profiles[platform] || {};
-      const defaultProfileId = profilesConfig.defaultProfiles[platform];
-
-      const profiles: ITerminalProfile[] = Object.entries(platformProfiles).map(([id, profile]) => {
-        const normalized = profile as any;
-        return {
-          id,
-          name: normalized?.name ?? id,
-          description: normalized?.description,
-          icon: normalized?.icon,
-          path: normalized?.path ?? '',
-          args: normalized?.args,
-          env: normalized?.env,
-          cwd: normalized?.cwd,
-          color: normalized?.color,
-          isDefault: defaultProfileId ? defaultProfileId === id : Boolean(normalized?.isDefault),
-          hidden: normalized?.hidden,
-          source: normalized?.source,
-        } as ITerminalProfile;
-      });
-
-      await this.deps.communicationService.sendMessage({
-        command: 'profilesUpdated' as const,
-        profiles,
-        defaultProfileId: defaultProfileId ?? profiles.find((p) => p.isDefault)?.id ?? null,
-      } as unknown as WebviewMessage);
-    } catch (error) {
-      log('❌ [HANDLER] Failed to fetch terminal profiles:', error);
-      await this.deps.communicationService.sendMessage({
-        command: 'profilesUpdated' as const,
-        profiles: [],
-        defaultProfileId: null,
-        error: (error as Error).message ?? String(error),
-      } as unknown as WebviewMessage);
-    }
   }
 
   /**

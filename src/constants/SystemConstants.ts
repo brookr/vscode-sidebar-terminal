@@ -1504,17 +1504,6 @@ export const CONFIG_CACHE_CONSTANTS = {
   CACHE_TTL_MS: 5000,
 
   /**
-   * プロファイルキャッシュ有効期限（ミリ秒）
-   *
-   * @rationale
-   * 1時間は、プロファイル自動検出結果のキャッシュに適切
-   *
-   * @performance
-   * 長時間キャッシュにより、ファイルシステムアクセスを削減
-   */
-  PROFILE_CACHE_EXPIRATION_MS: 3600000,
-
-  /**
    * デフォルトフォントサイズ（ピクセル）
    *
    * @rationale

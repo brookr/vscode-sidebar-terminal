@@ -121,10 +121,6 @@ function createCoordinator(): {
     },
     splitManager: {},
     findInTerminalManager: { setCoordinator: vi.fn() },
-    profileManager: {
-      setCoordinator: vi.fn(),
-      initialize: vi.fn().mockResolvedValue(undefined),
-    },
     shellIntegrationManager: { setCoordinator: vi.fn() },
     displayModeManager: { initialize: vi.fn() },
     terminalContainerManager: { initialize: vi.fn() },
@@ -177,12 +173,9 @@ describe('LightweightTerminalInitializationCoordinator', () => {
     );
     expect(initialized.messageManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
     expect(deps.findInTerminalManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
-    expect(deps.profileManager.setCoordinator).toHaveBeenCalledWith(deps.managerCoordinator);
     expect(deps.shellIntegrationManager.setCoordinator).toHaveBeenCalledWith(
       deps.managerCoordinator
     );
-    expect(deps.scheduleTimeout).toHaveBeenCalledWith(expect.any(Function), 100);
-    expect(initialized.profileManagerInitTimer).toBe(42);
     expect(initialized.terminalTabManager.initialize).toHaveBeenCalled();
     expect(deps.displayModeManager.initialize).toHaveBeenCalled();
     expect(deps.terminalContainerManager.initialize).toHaveBeenCalled();

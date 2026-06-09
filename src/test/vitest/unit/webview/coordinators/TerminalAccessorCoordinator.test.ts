@@ -30,7 +30,6 @@ function createDeps(): ITerminalAccessorCoordinatorDependencies {
       message: { id: 'message' } as any,
       notification: { id: 'notification' } as any,
       findInTerminal: { id: 'find' } as any,
-      profile: { id: 'profile' } as any,
       tabs: { id: 'tabs' } as any,
       persistence: { id: 'persistence' } as any,
       terminalContainer: { id: 'terminalContainer' } as any,

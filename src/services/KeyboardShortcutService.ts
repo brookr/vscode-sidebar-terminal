@@ -177,7 +177,7 @@ export class KeyboardShortcutService {
   }
 
   /**
-   * Create a new terminal with default profile
+   * Create a new terminal
    */
   private async createTerminal(): Promise<void> {
     try {
@@ -188,20 +188,7 @@ export class KeyboardShortcutService {
         forceNextCreate: true,
       });
 
-      // Check if we can use profile-based creation
-      const defaultProfile = this._terminalManager.getDefaultProfile();
-
-      let terminalId: string;
-      if (defaultProfile && 'createTerminalWithProfile' in this._terminalManager) {
-        // Use profile-based creation if available
-        terminalId = await this._terminalManager.createTerminalWithProfile(
-          defaultProfile,
-          creationOverrides
-        );
-      } else {
-        // Fallback to standard creation
-        terminalId = this._terminalManager.createTerminal(creationOverrides);
-      }
+      const terminalId = this._terminalManager.createTerminal(creationOverrides);
 
       if (terminalId) {
         log(`✅ [KEYBOARD] Created new terminal: ${terminalId}`);
