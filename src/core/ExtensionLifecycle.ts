@@ -149,7 +149,6 @@ export class ExtensionLifecycle {
         };
       }
 
-
       // Initialize SessionLifecycleManager first (needed by CommandRegistrar)
       this.sessionLifecycleManager = new SessionLifecycleManager({
         getTerminalManager: () => this.terminalManager,

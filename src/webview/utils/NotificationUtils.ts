@@ -7,7 +7,7 @@ export { NotificationConfig };
 
 const DEFAULT_DURATION = 4000;
 const activeNotifications = new Set<HTMLElement>();
-let uiManager: UIManager | null = null;
+const uiManager: UIManager | null = null;
 
 /**
  * 分割制限警告の表示

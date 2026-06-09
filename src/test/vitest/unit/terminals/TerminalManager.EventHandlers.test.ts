@@ -125,7 +125,6 @@ describe('TerminalManager - Event Handler Setup (TDD)', () => {
       // Cleanup
       terminalManager.removeTerminal(terminalId);
     });
-
   });
 
   describe('RED Phase: Data Event Emission Count', () => {

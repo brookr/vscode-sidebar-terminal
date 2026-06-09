@@ -136,7 +136,6 @@ export class KeyboardShortcutSetupHandler {
         (manager as { toggleDebugPanel: () => void }).toggleDebugPanel();
       }
     }
-
   }
 
   /**

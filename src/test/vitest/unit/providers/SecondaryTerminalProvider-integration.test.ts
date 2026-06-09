@@ -495,7 +495,6 @@ describe('SecondaryTerminalProvider - Integration Tests', () => {
         expect.any(String)
       );
     });
-
   });
 
   describe('CLI Agent Status', () => {

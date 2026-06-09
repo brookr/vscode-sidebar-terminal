@@ -74,7 +74,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
   private _webviewMessageListenerDisposable: vscode.Disposable | null = null;
   private _webviewMessageListenerView: vscode.WebviewView | null = null;
 
-
   // Terminal persistence services
   private _persistenceHandler?: PersistenceMessageHandler;
   private readonly _initializationCoordinator: TerminalInitializationCoordinator;
@@ -939,5 +938,4 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
 
     log('✅ [DEBUG] SecondaryTerminalProvider disposed');
   }
-
 }

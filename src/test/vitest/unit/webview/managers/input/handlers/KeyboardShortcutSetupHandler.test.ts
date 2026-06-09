@@ -210,7 +210,6 @@ describe('KeyboardShortcutSetupHandler', () => {
 
       expect(toggleDebugPanel).toHaveBeenCalled();
     });
-
   });
 
   describe('Agent interaction mode', () => {
