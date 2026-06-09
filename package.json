@@ -1,12 +1,12 @@
 {
   "name": "vscode-sidebar-terminal",
-  "displayName": "Secondary Terminal",
+  "displayName": "Secondary Terminal (pinned fork)",
   "description": "Sidebar terminal for VS Code with AI agent awareness (Claude Code, Copilot, Gemini, Codex, Antigravity), split views, session persistence, and full IME support.",
   "version": "1.1.0",
-  "publisher": "s-hiraoku",
+  "publisher": "brmsi",
   "sideEffects": false,
   "engines": {
-    "vscode": "^1.106.0",
+    "vscode": "^1.105.0",
     "node": ">=18.0.0"
   },
   "categories": [
@@ -1223,7 +1223,7 @@
     "@types/node": "24.x",
     "@types/sinon": "^21.0.0",
     "@types/sinon-chai": "^4.0.0",
-    "@types/vscode": "^1.106.1",
+    "@types/vscode": "^1.105.0",
     "@typescript-eslint/eslint-plugin": "^8.56.0",
     "@typescript-eslint/parser": "^8.0.0",
     "@vitest/coverage-v8": "^4.1.2",
