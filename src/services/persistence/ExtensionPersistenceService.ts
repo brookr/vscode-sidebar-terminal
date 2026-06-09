@@ -33,7 +33,7 @@ import {
 } from '../../shared/session.types';
 
 const PERSISTENCE_LOG_PREFIX = '[EXT-PERSISTENCE]';
-const log = (message: string, ...args: unknown[]) =>
+const log = (message: string, ...args: unknown[]): void =>
   logExtension(
     message.includes(PERSISTENCE_LOG_PREFIX) ? message : `${PERSISTENCE_LOG_PREFIX} ${message}`,
     ...args
@@ -163,83 +163,8 @@ export class ExtensionPersistenceService implements vscode.Disposable {
         `🔵 [SAVE-DEBUG] preferCache=${preferCache}, pushedScrollbackCache.size=${this.pushedScrollbackCache.size}`
       );
 
-      // Collect scrollback data - check cache first, request fresh if needed
-      const scrollbackPromises = terminals.map(async (terminal) => {
-        log(
-          `🔵 [SAVE-DEBUG] Processing terminal ${terminal.id}, cachedScrollback=${this.pushedScrollbackCache.has(terminal.id)}`
-        );
-        const cachedScrollback = this.pushedScrollbackCache.get(terminal.id);
-        log(`🔵 [SAVE-DEBUG] cachedScrollback length=${cachedScrollback?.length ?? 0}`);
-
-        if (preferCache) {
-          // 🔧 FIX: When preferCache is true (called from deactivate), use cache only.
-          // Do NOT call requestImmediateScrollbackExtraction because:
-          // 1. WebView may already be closed during deactivate()
-          // 2. Waiting for 2-second timeout would cause process to exit before saving
-          // The cache is updated every 30 seconds by TerminalAutoSaveService
-          if (cachedScrollback && cachedScrollback.length > 0) {
-            return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
-          }
-          // No cache available - return empty (better than hanging on WebView timeout)
-          log(
-            `⚠️ [SAVE-DEBUG] No cached scrollback for ${terminal.id}, skipping (preferCache=true)`
-          );
-          return { id: terminal.id, scrollback: [], fromCache: true };
-        }
-
-        // Normal save: request fresh extraction from WebView
-        const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
-        if (extracted.scrollback.length > 0) {
-          return { ...extracted, fromCache: false };
-        }
-        if (cachedScrollback && cachedScrollback.length > 0) {
-          return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
-        }
-        return { ...extracted, fromCache: false };
-      });
-
-      log(`🔵 [SAVE-DEBUG] Waiting for ${terminals.length} scrollback promises...`);
-      const extractedScrollbacks = await Promise.all(scrollbackPromises);
-      log(`🔵 [SAVE-DEBUG] All scrollback promises resolved, count=${extractedScrollbacks.length}`);
-
-      // Build scrollbackData from collected results
-      const scrollbackData: Record<string, unknown> = {};
-      let cachedCount = 0;
-      let extractedCount = 0;
-
-      for (const { id, scrollback, fromCache } of extractedScrollbacks) {
-        if (scrollback.length > 0) {
-          scrollbackData[id] = this.compressIfNeeded(scrollback);
-          if (fromCache) {
-            cachedCount++;
-          } else {
-            extractedCount++;
-          }
-        }
-      }
-
-      log(
-        `[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminals.length} total`
-      );
-
-      // Debug: Log scrollback data sizes and preview content
-      for (const terminalId of Object.keys(scrollbackData)) {
-        const data = scrollbackData[terminalId];
-        if (Array.isArray(data)) {
-          log(`📦 [EXT-PERSISTENCE] Saving scrollback for ${terminalId}: ${data.length} lines`);
-          // Log first 3 lines as preview
-          if (data.length > 0) {
-            const preview = data
-              .slice(0, 3)
-              .map((line) =>
-                typeof line === 'string'
-                  ? line.substring(0, 80)
-                  : JSON.stringify(line).substring(0, 80)
-              );
-            log(`📦 [EXT-PERSISTENCE] Preview for ${terminalId}: ${JSON.stringify(preview)}`);
-          }
-        }
-      }
+      const extractedScrollbacks = await this.collectScrollbacks(terminals, preferCache);
+      const scrollbackData = this.buildScrollbackData(extractedScrollbacks, terminals.length);
 
       // Build session data
       let sessionData: SessionStorageData = {
@@ -278,6 +203,99 @@ export class ExtensionPersistenceService implements vscode.Disposable {
       log(`❌ [EXT-PERSISTENCE] Save failed: ${errorMsg}`);
       return { success: false, terminalCount: 0, error: errorMsg };
     }
+  }
+
+  /**
+   * Collect scrollback data for each terminal - check cache first, request fresh if needed.
+   */
+  private async collectScrollbacks(
+    terminals: ReturnType<TerminalManager['getTerminals']>,
+    preferCache: boolean
+  ): Promise<Array<{ id: string; scrollback: string[]; fromCache: boolean }>> {
+    const scrollbackPromises = terminals.map(async (terminal) => {
+      log(
+        `🔵 [SAVE-DEBUG] Processing terminal ${terminal.id}, cachedScrollback=${this.pushedScrollbackCache.has(terminal.id)}`
+      );
+      const cachedScrollback = this.pushedScrollbackCache.get(terminal.id);
+      log(`🔵 [SAVE-DEBUG] cachedScrollback length=${cachedScrollback?.length ?? 0}`);
+
+      if (preferCache) {
+        // 🔧 FIX: When preferCache is true (called from deactivate), use cache only.
+        // Do NOT call requestImmediateScrollbackExtraction because:
+        // 1. WebView may already be closed during deactivate()
+        // 2. Waiting for 2-second timeout would cause process to exit before saving
+        // The cache is updated every 30 seconds by TerminalAutoSaveService
+        if (cachedScrollback && cachedScrollback.length > 0) {
+          return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
+        }
+        // No cache available - return empty (better than hanging on WebView timeout)
+        log(`⚠️ [SAVE-DEBUG] No cached scrollback for ${terminal.id}, skipping (preferCache=true)`);
+        return { id: terminal.id, scrollback: [], fromCache: true };
+      }
+
+      // Normal save: request fresh extraction from WebView
+      const extracted = await this.requestImmediateScrollbackExtraction(terminal.id);
+      if (extracted.scrollback.length > 0) {
+        return { ...extracted, fromCache: false };
+      }
+      if (cachedScrollback && cachedScrollback.length > 0) {
+        return { id: terminal.id, scrollback: cachedScrollback, fromCache: true };
+      }
+      return { ...extracted, fromCache: false };
+    });
+
+    log(`🔵 [SAVE-DEBUG] Waiting for ${terminals.length} scrollback promises...`);
+    const extractedScrollbacks = await Promise.all(scrollbackPromises);
+    log(`🔵 [SAVE-DEBUG] All scrollback promises resolved, count=${extractedScrollbacks.length}`);
+    return extractedScrollbacks;
+  }
+
+  /**
+   * Build the scrollbackData record from collected results, compressing and logging previews.
+   */
+  private buildScrollbackData(
+    extractedScrollbacks: Array<{ id: string; scrollback: string[]; fromCache: boolean }>,
+    terminalCount: number
+  ): Record<string, unknown> {
+    const scrollbackData: Record<string, unknown> = {};
+    let cachedCount = 0;
+    let extractedCount = 0;
+
+    for (const { id, scrollback, fromCache } of extractedScrollbacks) {
+      if (scrollback.length > 0) {
+        scrollbackData[id] = this.compressIfNeeded(scrollback);
+        if (fromCache) {
+          cachedCount++;
+        } else {
+          extractedCount++;
+        }
+      }
+    }
+
+    log(
+      `[EXT-PERSISTENCE] Scrollback: ${cachedCount} cached, ${extractedCount} extracted, ${terminalCount} total`
+    );
+
+    // Debug: Log scrollback data sizes and preview content
+    for (const terminalId of Object.keys(scrollbackData)) {
+      const data = scrollbackData[terminalId];
+      if (Array.isArray(data)) {
+        log(`📦 [EXT-PERSISTENCE] Saving scrollback for ${terminalId}: ${data.length} lines`);
+        // Log first 3 lines as preview
+        if (data.length > 0) {
+          const preview = data
+            .slice(0, 3)
+            .map((line) =>
+              typeof line === 'string'
+                ? line.substring(0, 80)
+                : JSON.stringify(line).substring(0, 80)
+            );
+          log(`📦 [EXT-PERSISTENCE] Preview for ${terminalId}: ${JSON.stringify(preview)}`);
+        }
+      }
+    }
+
+    return scrollbackData;
   }
 
   /**

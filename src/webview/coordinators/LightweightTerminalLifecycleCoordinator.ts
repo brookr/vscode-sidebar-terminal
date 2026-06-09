@@ -276,6 +276,34 @@ export class LightweightTerminalLifecycleCoordinator {
       return { action: 'skip', terminal: existingInstance.terminal ?? null };
     }
 
+    const { shouldForceNormal, shouldForceFullscreen } = await this.applyForcedDisplayMode(
+      terminalId,
+      config
+    );
+
+    const canCreate = this.dependencies.canCreateTerminal();
+    if (!canCreate && requestSource !== 'extension') {
+      const localCount = this.dependencies.splitManager.getTerminals().size ?? 0;
+      const maxCount =
+        this.dependencies.getCurrentTerminalState()?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
+      log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
+      this.dependencies.showTerminalLimitMessage(localCount, maxCount);
+      return { action: 'skip', terminal: null };
+    }
+
+    this.validateRequestedTerminalSlot(canCreate, terminalNumber);
+
+    return { action: 'continue', shouldForceNormal, shouldForceFullscreen };
+  }
+
+  /**
+   * Resolve and apply the forced display mode (if any) before terminal creation.
+   * Returns the resolved force flags so the caller can preserve later behavior.
+   */
+  private async applyForcedDisplayMode(
+    terminalId: string,
+    config?: TerminalConfig
+  ): Promise<{ shouldForceNormal: boolean; shouldForceFullscreen: boolean }> {
     const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
       ?.displayModeOverride;
     const shouldForceNormal =
@@ -305,16 +333,14 @@ export class LightweightTerminalLifecycleCoordinator {
       await this.ensureSplitModeBeforeTerminalCreation();
     }
 
-    const canCreate = this.dependencies.canCreateTerminal();
-    if (!canCreate && requestSource !== 'extension') {
-      const localCount = this.dependencies.splitManager.getTerminals().size ?? 0;
-      const maxCount =
-        this.dependencies.getCurrentTerminalState()?.maxTerminals ?? SPLIT_CONSTANTS.MAX_TERMINALS;
-      log(`❌ [STATE] Terminal creation blocked (local count=${localCount}, max=${maxCount})`);
-      this.dependencies.showTerminalLimitMessage(localCount, maxCount);
-      return { action: 'skip', terminal: null };
-    }
+    return { shouldForceNormal, shouldForceFullscreen };
+  }
 
+  /**
+   * Validate the requested terminal slot against cached state, requesting a
+   * fresh state from the Extension when the slot is unavailable or unknown.
+   */
+  private validateRequestedTerminalSlot(canCreate: boolean, terminalNumber?: number): void {
     const currentTerminalState = this.dependencies.getCurrentTerminalState();
     if (currentTerminalState) {
       const availableSlots = currentTerminalState.availableSlots;
@@ -331,8 +357,6 @@ export class LightweightTerminalLifecycleCoordinator {
       log('⚠️ [STATE] No cached state available, requesting from Extension...');
       this.dependencies.requestLatestState();
     }
-
-    return { action: 'continue', shouldForceNormal, shouldForceFullscreen };
   }
 
   private postTerminalCreation(params: {
@@ -398,6 +422,26 @@ export class LightweightTerminalLifecycleCoordinator {
     }
 
     log(`✅ Terminal creation completed: ${terminalId}`);
+
+    this.maintainSplitLayoutAfterCreation({
+      terminalId,
+      allContainers,
+      shouldForceNormal,
+      shouldForceFullscreen,
+    });
+  }
+
+  /**
+   * Refresh the split layout (immediately and after a resize tick) when the
+   * newly created terminal should preserve the existing split arrangement.
+   */
+  private maintainSplitLayoutAfterCreation(params: {
+    terminalId: string;
+    allContainers: Map<string, HTMLElement>;
+    shouldForceNormal: boolean;
+    shouldForceFullscreen: boolean;
+  }): void {
+    const { terminalId, allContainers, shouldForceNormal, shouldForceFullscreen } = params;
 
     const currentMode = this.dependencies.displayModeManager?.getCurrentMode?.() ?? 'normal';
     const splitManagerActive = this.dependencies.splitManager.getIsSplitMode();

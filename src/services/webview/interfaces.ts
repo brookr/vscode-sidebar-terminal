@@ -6,11 +6,11 @@ import { TerminalManager } from '../../terminals/TerminalManager';
  * Session Manager interface for message handlers
  */
 export interface ISessionManager {
-  getSessionInfo(): { hasValidSession: boolean; sessionData?: any };
+  getSessionInfo(): { hasValidSession: boolean; sessionData?: unknown };
   restoreSession(
     force: boolean
-  ): Promise<{ success: boolean; message?: string; terminals?: any[] }>;
-  saveSession(terminals: any[]): Promise<void>;
+  ): Promise<{ success: boolean; message?: string; terminals?: unknown[] }>;
+  saveSession(terminals: unknown[]): Promise<void>;
 }
 
 /**

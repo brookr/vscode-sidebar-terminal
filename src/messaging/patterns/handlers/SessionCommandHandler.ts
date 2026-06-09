@@ -105,13 +105,20 @@ export class SessionCommandHandler extends BaseCommandHandler {
 
     this.log(context, 'info', 'Starting session restore');
 
-    const { terminals, activeTerminalId, config } = message as any;
+    const { terminals, activeTerminalId, config } = message;
 
     this.validateRequired(message, ['terminals']);
 
     // Delegate to coordinator's session restoration logic
-    if (typeof (coordinator as any).restoreSession === 'function') {
-      await (coordinator as any).restoreSession({
+    const sessionCoordinator = coordinator as {
+      restoreSession?: (data: {
+        terminals: WebviewMessage['terminals'];
+        activeTerminalId: WebviewMessage['activeTerminalId'];
+        config: WebviewMessage['config'];
+      }) => Promise<void>;
+    };
+    if (typeof sessionCoordinator.restoreSession === 'function') {
+      await sessionCoordinator.restoreSession({
         terminals,
         activeTerminalId,
         config,
@@ -139,7 +146,10 @@ export class SessionCommandHandler extends BaseCommandHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): void {
-    const { progress, total } = message as any;
+    const { progress, total } = message as WebviewMessage & {
+      progress?: number;
+      total?: number;
+    };
     this.log(context, 'debug', `Session restore progress: ${progress}/${total}`);
     // Update UI with progress
   }
@@ -151,7 +161,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): void {
-    const { restoredCount } = message as any;
+    const { restoredCount } = message as WebviewMessage & { restoredCount?: number };
     this.log(context, 'info', `Session restore completed: ${restoredCount} terminals restored`);
     // Update UI to show completion
   }
@@ -163,7 +173,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): void {
-    const { error } = message as any;
+    const { error } = message;
     this.log(context, 'error', 'Session restore failed', error);
     // Show error notification
   }
@@ -175,7 +185,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): void {
-    const { reason } = message as any;
+    const { reason } = message;
     this.log(context, 'info', `Session restore skipped: ${reason || 'unknown reason'}`);
   }
 
@@ -183,7 +193,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
    * Handle session saved event
    */
   private handleSessionSaved(message: WebviewMessage, context: IMessageHandlerContext): void {
-    const { terminalCount } = message as any;
+    const { terminalCount } = message;
     this.log(context, 'info', `Session saved: ${terminalCount || 'unknown'} terminals`);
   }
 
@@ -191,7 +201,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
    * Handle session save error event
    */
   private handleSessionSaveError(message: WebviewMessage, context: IMessageHandlerContext): void {
-    const { error } = message as any;
+    const { error } = message;
     this.log(context, 'error', 'Session save failed', error);
   }
 
@@ -206,7 +216,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
    * Handle session restored event
    */
   private handleSessionRestored(message: WebviewMessage, context: IMessageHandlerContext): void {
-    const { terminals } = message as any;
+    const { terminals } = message;
     this.log(context, 'info', `Session restored with ${terminals?.length || 0} terminals`);
   }
 
@@ -217,7 +227,7 @@ export class SessionCommandHandler extends BaseCommandHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId, error } = message as any;
+    const { terminalId, error } = message;
     this.log(context, 'error', `Terminal restore error for ${terminalId}`, error);
   }
 }

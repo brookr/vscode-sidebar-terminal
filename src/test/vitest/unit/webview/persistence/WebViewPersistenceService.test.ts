@@ -44,7 +44,7 @@ describe('WebViewPersistenceService', () => {
         terminals: new Array(1000).fill({ id: 't', name: 'x'.repeat(10000) }),
       };
 
-      // @ts-ignore - mocking private method
+      // @ts-expect-error -- mocking private method
       vi.spyOn(service, 'collectLocalSessionData').mockResolvedValue(hugeData);
 
       // @ts-expect-error - test mock type

@@ -61,6 +61,28 @@ export class SpecialKeysHandler {
     terminalId: string,
     manager: IManagerCoordinator
   ): boolean {
+    // Each handler returns a boolean when it consumes the event, or undefined to
+    // fall through to the next handler — preserving the original sequential checks.
+    const handlers: Array<() => boolean | undefined> = [
+      () => this.handleImeGuards(event),
+      () => this.handleCopyOrInterrupt(event, terminalId, manager),
+      () => this.handlePasteKeys(event),
+      () => this.handleInsertKeys(event, terminalId, manager),
+      () => this.handleMultilineEnter(event, terminalId),
+    ];
+
+    for (const handler of handlers) {
+      const result = handler();
+      if (result !== undefined) {
+        return result;
+      }
+    }
+
+    return false;
+  }
+
+  /** Blocks special-key processing while an IME composition is active. */
+  private handleImeGuards(event: KeyboardEvent): boolean | undefined {
     // VS Code standard: Check IME composition state first
     if (this.deps.isIMEComposing()) {
       this.deps.logger(`Special key ${event.key} blocked during IME composition`);
@@ -74,6 +96,15 @@ export class SpecialKeysHandler {
       return true;
     }
 
+    return undefined;
+  }
+
+  /** Handles Ctrl/Cmd+C as copy (when a selection exists) or interrupt. */
+  private handleCopyOrInterrupt(
+    event: KeyboardEvent,
+    terminalId: string,
+    manager: IManagerCoordinator
+  ): boolean | undefined {
     // Ctrl+C (Windows/Linux) or Cmd+C (macOS): Copy (if selection exists) or interrupt
     if ((event.ctrlKey || event.metaKey) && event.key === 'c') {
       const terminal = this.deps.getTerminalInstance(terminalId);
@@ -92,6 +123,11 @@ export class SpecialKeysHandler {
       }
     }
 
+    return undefined;
+  }
+
+  /** Lets the paste event handler process Cmd+V (macOS) or Ctrl+V (other platforms). */
+  private handlePasteKeys(event: KeyboardEvent): boolean | undefined {
     // Paste handling: Let paste event handler deal with it
     const isMac = isMacPlatform();
     if (event.key === 'v') {
@@ -104,6 +140,15 @@ export class SpecialKeysHandler {
       }
     }
 
+    return undefined;
+  }
+
+  /** Handles Ctrl+Insert (copy) and Shift+Insert (paste). */
+  private handleInsertKeys(
+    event: KeyboardEvent,
+    terminalId: string,
+    manager: IManagerCoordinator
+  ): boolean | undefined {
     // Ctrl+Insert (Windows/Linux): Copy - VS Code standard shortcut
     if (event.ctrlKey && event.key === 'Insert') {
       const terminal = this.deps.getTerminalInstance(terminalId);
@@ -125,6 +170,11 @@ export class SpecialKeysHandler {
       return true;
     }
 
+    return undefined;
+  }
+
+  /** Sends a newline for Shift/Alt/Cmd+Enter (multiline input for CLI agents). */
+  private handleMultilineEnter(event: KeyboardEvent, terminalId: string): boolean | undefined {
     // Shift+Enter or Option/Alt+Enter: Send newline for Claude Code multiline input
     if (event.key === 'Enter' && (event.shiftKey || event.altKey || event.metaKey)) {
       this.deps.logger(
@@ -136,6 +186,6 @@ export class SpecialKeysHandler {
       return true;
     }
 
-    return false;
+    return undefined;
   }
 }

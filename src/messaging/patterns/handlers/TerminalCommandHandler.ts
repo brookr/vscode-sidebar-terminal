@@ -13,6 +13,29 @@ import { WebviewMessage } from '../../../types/common';
 import { BaseCommandHandler, IMessageHandlerContext } from '../core/IMessageHandler';
 
 /**
+ * Minimal terminal instance shape used by this handler.
+ */
+interface ITerminalInstanceLike {
+  terminal?: {
+    write?: (data: unknown) => void;
+    clear?: () => void;
+  };
+}
+
+/**
+ * Structural view of the coordinator methods consumed by this handler.
+ * Methods are optional because they are feature-detected at runtime.
+ */
+interface ITerminalCoordinatorLike {
+  initializeTerminal?: (message: WebviewMessage) => void | Promise<void>;
+  createTerminal?: (message: WebviewMessage) => void | Promise<void>;
+  setActiveTerminal?: (terminalId: string) => void;
+  removeTerminal?: (terminalId: string) => void;
+  getActiveTerminalId?: () => string | undefined;
+  getTerminalInstance?: (terminalId: string) => ITerminalInstanceLike | undefined;
+}
+
+/**
  * Handler for terminal-related commands
  */
 export class TerminalCommandHandler extends BaseCommandHandler {
@@ -36,7 +59,7 @@ export class TerminalCommandHandler extends BaseCommandHandler {
 
   public async handle(message: WebviewMessage, context: IMessageHandlerContext): Promise<void> {
     const { command } = message;
-    const coordinator = context.coordinator;
+    const coordinator = context.coordinator as ITerminalCoordinatorLike | undefined;
 
     if (!coordinator) {
       throw new Error('Coordinator not available for terminal operations');
@@ -82,7 +105,7 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleInit(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
     this.log(context, 'debug', 'Initializing terminal');
@@ -99,10 +122,10 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleOutput(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId, data } = message as any;
+    const { terminalId, data } = message;
 
     if (!terminalId) {
       throw new Error('Missing terminalId for output command');
@@ -112,7 +135,7 @@ export class TerminalCommandHandler extends BaseCommandHandler {
       dataLength: data?.length || 0,
     });
 
-    const terminalInstance = coordinator.getTerminalInstance(terminalId);
+    const terminalInstance = coordinator.getTerminalInstance?.(terminalId);
     if (terminalInstance && typeof terminalInstance.terminal?.write === 'function') {
       terminalInstance.terminal.write(data);
     } else {
@@ -125,10 +148,10 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleTerminalCreated(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId } = message as any;
+    const { terminalId } = message;
 
     this.log(context, 'info', `Terminal created: ${terminalId || 'new'}`);
 
@@ -143,10 +166,10 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleFocusTerminal(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId } = message as any;
+    const { terminalId } = message;
 
     if (!terminalId) {
       throw new Error('Missing terminalId for focus command');
@@ -164,10 +187,10 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleTerminalRemoved(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId } = message as any;
+    const { terminalId } = message;
 
     if (!terminalId) {
       throw new Error('Missing terminalId for remove command');
@@ -185,16 +208,16 @@ export class TerminalCommandHandler extends BaseCommandHandler {
    */
   private async handleClear(
     message: WebviewMessage,
-    coordinator: any,
+    coordinator: ITerminalCoordinatorLike,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const { terminalId } = message as any;
+    const { terminalId } = message;
 
     this.log(context, 'debug', `Clearing terminal: ${terminalId || 'active'}`);
 
-    const targetId = terminalId || coordinator.getActiveTerminalId();
+    const targetId = terminalId || coordinator.getActiveTerminalId?.();
     if (targetId) {
-      const terminalInstance = coordinator.getTerminalInstance(targetId);
+      const terminalInstance = coordinator.getTerminalInstance?.(targetId);
       if (terminalInstance && typeof terminalInstance.terminal?.clear === 'function') {
         terminalInstance.terminal.clear();
       }

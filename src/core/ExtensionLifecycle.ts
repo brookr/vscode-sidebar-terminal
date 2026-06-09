@@ -11,6 +11,25 @@ import { TelemetryService } from '../services/TelemetryService';
 import { CommandRegistrar } from './CommandRegistrar';
 import { SessionLifecycleManager } from './SessionLifecycleManager';
 import { FocusProtectionService } from '../services/FocusProtectionService';
+import type { AgentType } from '../types/shared';
+
+/** Status-change event emitted by the CLI agent detection service. */
+interface CliAgentStatusEvent {
+  terminalId: string;
+  status: 'connected' | 'disconnected' | 'none';
+  type: AgentType | null;
+  terminalName?: string;
+}
+
+/** Minimal shape of the CLI agent detection service used for telemetry wiring. */
+interface CliAgentStatusSource {
+  onCliAgentStatusChange?: (listener: (event: CliAgentStatusEvent) => void) => vscode.Disposable;
+}
+
+/** Optional method exposed by the persistence service for late sidebar wiring. */
+interface SidebarProviderSink {
+  setSidebarProvider?: (provider: SecondaryTerminalProvider) => void;
+}
 
 /** Manages extension activation, service initialization, and cleanup. */
 export class ExtensionLifecycle {
@@ -95,7 +114,9 @@ export class ExtensionLifecycle {
 
       // Set sidebar provider for ExtensionPersistenceService
       if (this.extensionPersistenceService) {
-        (this.extensionPersistenceService as any).setSidebarProvider?.(this.sidebarProvider);
+        (this.extensionPersistenceService as unknown as SidebarProviderSink).setSidebarProvider?.(
+          this.sidebarProvider
+        );
       }
 
       // Initialize keyboard shortcut service
@@ -109,76 +130,11 @@ export class ExtensionLifecycle {
         this.shellIntegrationService.setWebviewProvider(this.sidebarProvider);
       }
 
-      // Initialize focus protection service
-      this.focusProtectionService = new FocusProtectionService({
-        isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
-        isWebViewVisible: () => this.sidebarProvider?.isWebViewVisible() ?? false,
-        sendWebviewFocus: (terminalId?: string) => {
-          const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
-          if (this.sidebarProvider && targetId) {
-            void this.sidebarProvider.sendMessageToWebview({
-              command: 'focusTerminal',
-              terminalId: targetId,
-            });
-          }
-        },
-      });
+      // Initialize and wire the focus protection service
+      this.setupFocusProtection();
 
-      // Wire terminal focus changes to focus protection service
-      if (this.terminalManager && this.focusProtectionService) {
-        const focusProtection = this.focusProtectionService;
-        const originalSetFocused = this.terminalManager.setTerminalFocused.bind(
-          this.terminalManager
-        );
-        this.terminalManager.setTerminalFocused = (focused: boolean) => {
-          originalSetFocused(focused);
-          focusProtection.notifyFocusChanged(focused);
-        };
-
-        // Wire terminal input (keystrokes) to refresh the focus window so that
-        // long typing sessions (e.g. typing into Claude Code) don't let the
-        // recent-focus guard expire and defeat focus protection.
-        const originalSendInput = this.terminalManager.sendInput.bind(this.terminalManager);
-        this.terminalManager.sendInput = (data: string, terminalId?: string) => {
-          // Pass the terminal ID so focus protection knows which terminal to
-          // restore when focus is stolen — important when multiple sidebar
-          // terminals exist.
-          const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
-          focusProtection.notifyInteraction(targetId);
-          originalSendInput(data, terminalId);
-        };
-      }
-
-      // Initialize SessionLifecycleManager first (needed by CommandRegistrar)
-      this.sessionLifecycleManager = new SessionLifecycleManager({
-        getTerminalManager: () => this.terminalManager,
-        getSidebarProvider: () => this.sidebarProvider,
-        getExtensionPersistenceService: () => this.extensionPersistenceService,
-        getExtensionContext: () => this._extensionContext,
-      });
-
-      // Initialize CommandRegistrar and register all commands
-      this.commandRegistrar = new CommandRegistrar(
-        {
-          terminalManager: this.terminalManager,
-          sidebarProvider: this.sidebarProvider,
-          extensionPersistenceService: this.extensionPersistenceService,
-          fileReferenceCommand: this.fileReferenceCommand,
-          terminalCommand: this.terminalCommand,
-          copilotIntegrationCommand: this.copilotIntegrationCommand,
-          shellIntegrationService: this.shellIntegrationService,
-          keyboardShortcutService: this.keyboardShortcutService,
-          telemetryService: this.telemetryService,
-        },
-        {
-          handleSaveSession: () => this.sessionLifecycleManager!.handleSaveSession(),
-          handleRestoreSession: () => this.sessionLifecycleManager!.handleRestoreSession(),
-          handleClearSession: () => this.sessionLifecycleManager!.handleClearSession(),
-          handleTestScrollback: () => this.sessionLifecycleManager!.handleTestScrollback(),
-          diagnoseSessionData: () => this.sessionLifecycleManager!.diagnoseSessionData(),
-        }
-      );
-      this.commandRegistrar.registerCommands(context);
+      // Initialize SessionLifecycleManager and CommandRegistrar, then register commands
+      this.initializeCommandsAndSession(context);
 
       // CRITICAL: Session restore is now handled by SecondaryTerminalProvider asynchronously
       // This prevents VS Code activation spinner from hanging
@@ -195,7 +151,7 @@ export class ExtensionLifecycle {
       context.subscriptions.push(sidebarWebviewProvider);
 
       // 自動保存設定 - delegate to SessionLifecycleManager
-      this.sessionLifecycleManager.setupSessionAutoSave(context);
+      this.sessionLifecycleManager?.setupSessionAutoSave(context);
       // Track successful activation
       const activationDuration = Date.now() - activationStartTime;
       this.telemetryService?.trackActivation(activationDuration);
@@ -224,6 +180,80 @@ export class ExtensionLifecycle {
 
       // CRITICAL: Even on error, resolve activation Promise to prevent spinner hanging
       return Promise.resolve();
+    }
+  }
+
+  /** Initializes the session lifecycle manager and command registrar, then registers commands. */
+  private initializeCommandsAndSession(context: vscode.ExtensionContext): void {
+    // Initialize SessionLifecycleManager first (needed by CommandRegistrar)
+    this.sessionLifecycleManager = new SessionLifecycleManager({
+      getTerminalManager: () => this.terminalManager,
+      getSidebarProvider: () => this.sidebarProvider,
+      getExtensionPersistenceService: () => this.extensionPersistenceService,
+      getExtensionContext: () => this._extensionContext,
+    });
+
+    // Initialize CommandRegistrar and register all commands
+    this.commandRegistrar = new CommandRegistrar(
+      {
+        terminalManager: this.terminalManager,
+        sidebarProvider: this.sidebarProvider,
+        extensionPersistenceService: this.extensionPersistenceService,
+        fileReferenceCommand: this.fileReferenceCommand,
+        terminalCommand: this.terminalCommand,
+        copilotIntegrationCommand: this.copilotIntegrationCommand,
+        shellIntegrationService: this.shellIntegrationService,
+        keyboardShortcutService: this.keyboardShortcutService,
+        telemetryService: this.telemetryService,
+      },
+      {
+        handleSaveSession: () => this.sessionLifecycleManager!.handleSaveSession(),
+        handleRestoreSession: () => this.sessionLifecycleManager!.handleRestoreSession(),
+        handleClearSession: () => this.sessionLifecycleManager!.handleClearSession(),
+        handleTestScrollback: () => this.sessionLifecycleManager!.handleTestScrollback(),
+        diagnoseSessionData: () => this.sessionLifecycleManager!.diagnoseSessionData(),
+      }
+    );
+    this.commandRegistrar.registerCommands(context);
+  }
+
+  /** Creates the focus protection service and wires terminal focus/input events to it. */
+  private setupFocusProtection(): void {
+    this.focusProtectionService = new FocusProtectionService({
+      isTerminalFocused: () => this.terminalManager?.isTerminalFocused() ?? false,
+      isWebViewVisible: () => this.sidebarProvider?.isWebViewVisible() ?? false,
+      sendWebviewFocus: (terminalId?: string) => {
+        const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
+        if (this.sidebarProvider && targetId) {
+          void this.sidebarProvider.sendMessageToWebview({
+            command: 'focusTerminal',
+            terminalId: targetId,
+          });
+        }
+      },
+    });
+
+    // Wire terminal focus changes to focus protection service
+    if (this.terminalManager && this.focusProtectionService) {
+      const focusProtection = this.focusProtectionService;
+      const originalSetFocused = this.terminalManager.setTerminalFocused.bind(this.terminalManager);
+      this.terminalManager.setTerminalFocused = (focused: boolean) => {
+        originalSetFocused(focused);
+        focusProtection.notifyFocusChanged(focused);
+      };
+
+      // Wire terminal input (keystrokes) to refresh the focus window so that
+      // long typing sessions (e.g. typing into Claude Code) don't let the
+      // recent-focus guard expire and defeat focus protection.
+      const originalSendInput = this.terminalManager.sendInput.bind(this.terminalManager);
+      this.terminalManager.sendInput = (data: string, terminalId?: string) => {
+        // Pass the terminal ID so focus protection knows which terminal to
+        // restore when focus is stolen — important when multiple sidebar
+        // terminals exist.
+        const targetId = terminalId ?? this.terminalManager?.getActiveTerminalId();
+        focusProtection.notifyInteraction(targetId);
+        originalSendInput(data, terminalId);
+      };
     }
   }
 
@@ -403,10 +433,14 @@ export class ExtensionLifecycle {
 
     // Track CLI Agent detection events
     if (this.shellIntegrationService) {
-      const cliAgentService = (this.shellIntegrationService as any).cliAgentDetectionService;
+      const cliAgentService = (
+        this.shellIntegrationService as unknown as {
+          cliAgentDetectionService?: CliAgentStatusSource;
+        }
+      ).cliAgentDetectionService;
 
       if (cliAgentService?.onCliAgentStatusChange) {
-        const cliAgentStatusDisposable = cliAgentService.onCliAgentStatusChange((event: any) => {
+        const cliAgentStatusDisposable = cliAgentService.onCliAgentStatusChange((event) => {
           if (event.status === 'connected') {
             this.telemetryService?.trackCliAgentDetected(event.type || 'unknown');
             log(`📊 [TELEMETRY] CLI Agent detected: ${event.type}`);

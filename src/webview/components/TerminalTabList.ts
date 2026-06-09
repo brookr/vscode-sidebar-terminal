@@ -106,7 +106,20 @@ export class TerminalTabList {
 
     const style = document.createElement('style');
     style.id = 'terminal-tab-list-styles';
-    style.textContent = `
+    style.textContent = this.getStylesheetContent();
+    document.head.appendChild(style);
+  }
+
+  private getStylesheetContent(): string {
+    return this.getLayoutStyles() + this.getIndicatorAndScrollbarStyles();
+  }
+
+  private getLayoutStyles(): string {
+    return this.getContainerStyles() + this.getTabStyles();
+  }
+
+  private getContainerStyles(): string {
+    return `
       .terminal-tabs-container {
         display: flex;
         flex-direction: column;
@@ -172,7 +185,11 @@ export class TerminalTabList {
         min-height: 100%;
         position: relative;
       }
+`;
+  }
 
+  private getTabStyles(): string {
+    return `
       .terminal-tab {
         display: flex;
         align-items: center;
@@ -267,7 +284,11 @@ export class TerminalTabList {
       .terminal-tab:hover .terminal-tab-close {
         color: #ffffff !important;
       }
+`;
+  }
 
+  private getIndicatorAndScrollbarStyles(): string {
+    return `
       .drop-indicator {
         position: absolute;
         width: 2px;
@@ -296,7 +317,6 @@ export class TerminalTabList {
         background: var(--vscode-scrollbarSlider-hoverBackground);
       }
     `;
-    document.head.appendChild(style);
   }
 
   private setupKeyboardNavigation(): void {
@@ -802,14 +822,14 @@ export class TerminalTabList {
     let finished = false;
     let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
-    const cancelBlurTimeout = () => {
+    const cancelBlurTimeout = (): void => {
       if (blurTimeout !== null) {
         clearTimeout(blurTimeout);
         blurTimeout = null;
       }
     };
 
-    const finishRename = (save: boolean = true) => {
+    const finishRename = (save: boolean = true): void => {
       if (finished) return;
       finished = true;
       cancelBlurTimeout();
@@ -925,7 +945,7 @@ export class TerminalTabList {
     document.body.appendChild(menu);
 
     // Close menu when clicking outside
-    const closeMenu = (e: MouseEvent) => {
+    const closeMenu = (e: MouseEvent): void => {
       if (!menu.contains(e.target as Node)) {
         document.body.removeChild(menu);
         document.removeEventListener('click', closeMenu);

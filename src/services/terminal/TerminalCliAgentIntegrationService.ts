@@ -36,7 +36,7 @@ export class TerminalCliAgentIntegrationService {
   /**
    * Get CLI Agent status change event emitter
    */
-  get onCliAgentStatusChange() {
+  get onCliAgentStatusChange(): ICliAgentDetectionService['onCliAgentStatusChange'] {
     return this._cliAgentService.onCliAgentStatusChange;
   }
 

@@ -92,6 +92,7 @@ export interface TerminalDisplaySnapshot {
 
 // Header management interface (subset used by other managers)
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional marker interface; HeaderManager's public methods (split button) were removed, leaving an opaque handle referenced only as an optional `header?` field
 export interface IHeaderManager {
   // Empty interface - split button removed
 }

@@ -38,6 +38,7 @@ export class PluginConfigurationService implements vscode.Disposable {
     this.applyConfiguration();
 
     // Watch for configuration changes
+    // eslint-disable-next-line no-restricted-syntax -- stored in configWatcher, pushed to _disposables, and released in dispose()
     const configWatcher = vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration(this._configSection)) {
         log('🔄 [PLUGIN-CONFIG] Configuration changed, reloading plugins...');

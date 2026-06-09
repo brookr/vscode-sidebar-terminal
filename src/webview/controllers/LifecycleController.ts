@@ -55,8 +55,8 @@ class DisposableStore {
 interface TerminalResources {
   terminal: Terminal;
   disposables: DisposableStore;
-  addons: Map<string, any>;
-  eventListeners: Map<string, (...args: any[]) => void>;
+  addons: Map<string, ITerminalAddon>;
+  eventListeners: Map<string, (...args: unknown[]) => void>;
 }
 
 export interface AddonLoadOptions {
@@ -84,7 +84,7 @@ interface Disposable {
 
 export class LifecycleController implements ILifecycleController, Disposable {
   private terminals: Map<string, TerminalResources> = new Map();
-  private addonCache: Map<string, any> = new Map();
+  private addonCache: Map<string, ITerminalAddon> = new Map();
   private disposed = false;
 
   public attachTerminal(terminalId: string, terminal: Terminal): void {
@@ -192,7 +192,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
   public addEventListener(
     terminalId: string,
     eventName: string,
-    handler: (...args: any[]) => void
+    handler: (...args: unknown[]) => void
   ): void {
     const resources = this.terminals.get(terminalId);
     if (!resources) {
@@ -254,7 +254,7 @@ export class LifecycleController implements ILifecycleController, Disposable {
       return null;
     }
 
-    return resources.addons.get(addonName) || null;
+    return (resources.addons.get(addonName) as T | undefined) || null;
   }
 
   public hasTerminal(terminalId: string): boolean {

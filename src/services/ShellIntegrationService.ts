@@ -41,7 +41,7 @@ export class ShellIntegrationService {
   private promptPatterns: RegExp[] = [];
   private commandStartTime = new Map<string, number>();
   private shellIntegrationPermissionGranted: boolean | undefined = undefined;
-  private context: vscode.ExtensionContext;
+  private context: vscode.ExtensionContext | null;
 
   // VS Code standard shell integration sequences
   private readonly OSC_SEQUENCES = {
@@ -84,7 +84,7 @@ export class ShellIntegrationService {
       );
     } else {
       // Fallback if no context provided (for backward compatibility)
-      this.context = null as any;
+      this.context = null;
     }
   }
 

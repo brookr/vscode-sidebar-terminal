@@ -214,7 +214,12 @@ export abstract class LazyInitializable {
  * Use this when you need to apply lazy initialization to a class that already
  * has a base class.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// The return type is the anonymous mixin class intersected with Base, including
+// protected members (ensureInitialized*, resetInitialization) that subclasses
+// rely on via `this`. That type cannot be written explicitly without re-declaring
+// protected members as public (which would widen the API), so we rely on
+// inference here.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-function-return-type -- see comment above: precise mixin return type (with protected members) is not expressible explicitly
 export function withLazyInitialization<T extends new (...args: any[]) => object>(Base: T) {
   return class extends Base {
     private _initState: InitializationState = InitializationState.UNINITIALIZED;

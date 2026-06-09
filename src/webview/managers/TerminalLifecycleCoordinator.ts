@@ -417,7 +417,7 @@ export class TerminalLifecycleCoordinator {
       });
 
       // 🔧 CRITICAL FIX: Force a single reflow after all resets
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- reading offsetWidth forces a synchronous layout flush
       document.body.offsetWidth;
 
       // 🔧 CRITICAL FIX: Use requestAnimationFrame for better timing

@@ -353,12 +353,41 @@ export class CliAgentDetectionEngine {
     const terminalSignals = this.getTerminalSignalState(terminalId);
     const normalizedLine = cleanLine.trim();
 
-    // Claude Code TUI uses "❯" prompts inside the application. Our shell prompt regexes
-    // also match it (Starship), which can cause a false termination and flip connected -> none.
-    // Prefer explicit termination/shell-integration signals for Claude instead.
-    //
-    // Note: Some call sites may not provide agentType reliably; use recent shell/input context
-    // as a fallback signal that Claude is active in this terminal.
+    return (
+      this.checkClaudeTuiPrompt(
+        terminalId,
+        cleanLine,
+        normalizedLine,
+        terminalSignals,
+        agentType
+      ) ??
+      this.checkInterruptSignal(cleanLine, normalizedLine, terminalSignals) ??
+      this.checkExplicitTermination(cleanLine, terminalSignals, agentType) ??
+      this.checkShellPromptTermination(terminalId, cleanLine, terminalSignals) ??
+      this.checkTimeoutTermination(terminalId, cleanLine) ?? {
+        isTerminated: false,
+        confidence: 0,
+        detectedLine: cleanLine,
+        reason: 'No termination pattern matched',
+      }
+    );
+  }
+
+  /**
+   * Claude Code TUI uses "❯" prompts inside the application. Our shell prompt regexes
+   * also match it (Starship), which can cause a false termination and flip connected -> none.
+   * Prefer explicit termination/shell-integration signals for Claude instead.
+   *
+   * Note: Some call sites may not provide agentType reliably; use recent shell/input context
+   * as a fallback signal that Claude is active in this terminal.
+   */
+  private checkClaudeTuiPrompt(
+    terminalId: string,
+    cleanLine: string,
+    normalizedLine: string,
+    terminalSignals: TerminalSignalState,
+    agentType?: AgentType
+  ): TerminationResult | null {
     const now = Date.now();
     const claudeContextLikelyActive =
       agentType === 'claude' ||
@@ -383,6 +412,17 @@ export class CliAgentDetectionEngine {
       };
     }
 
+    return null;
+  }
+
+  /**
+   * Detect interrupt signals (^C / KeyboardInterrupt) and double-interrupt termination.
+   */
+  private checkInterruptSignal(
+    cleanLine: string,
+    normalizedLine: string,
+    terminalSignals: TerminalSignalState
+  ): TerminationResult | null {
     if (normalizedLine === '^C' || normalizedLine.toLowerCase() === 'keyboardinterrupt') {
       const interruptState = this.registerInterruptSignal(terminalSignals, 'output');
       if (interruptState.isDoubleInterrupt) {
@@ -403,7 +443,17 @@ export class CliAgentDetectionEngine {
       };
     }
 
-    // 1. Check explicit termination patterns (highest confidence)
+    return null;
+  }
+
+  /**
+   * Check explicit termination patterns (highest confidence).
+   */
+  private checkExplicitTermination(
+    cleanLine: string,
+    terminalSignals: TerminalSignalState,
+    agentType?: AgentType
+  ): TerminationResult | null {
     if (this.patternRegistry.isTerminationPattern(cleanLine, agentType)) {
       this.resetInterruptTracking(terminalSignals);
       log(`✅ [TERMINATION] Explicit termination detected: "${cleanLine}"`);
@@ -415,53 +465,71 @@ export class CliAgentDetectionEngine {
       };
     }
 
-    // 2. Check shell prompt patterns
-    if (this.patternRegistry.isShellPrompt(cleanLine)) {
-      const recentInterrupt =
-        terminalSignals.lastInterruptAt > 0 &&
-        Date.now() - terminalSignals.lastInterruptAt <= this.INTERRUPT_PROMPT_WINDOW_MS;
+    return null;
+  }
 
-      if (recentInterrupt) {
+  /**
+   * Check shell prompt patterns, accounting for recent interrupts and AI-output false positives.
+   */
+  private checkShellPromptTermination(
+    terminalId: string,
+    cleanLine: string,
+    terminalSignals: TerminalSignalState
+  ): TerminationResult | null {
+    if (!this.patternRegistry.isShellPrompt(cleanLine)) {
+      return null;
+    }
+
+    const recentInterrupt =
+      terminalSignals.lastInterruptAt > 0 &&
+      Date.now() - terminalSignals.lastInterruptAt <= this.INTERRUPT_PROMPT_WINDOW_MS;
+
+    if (recentInterrupt) {
+      this.resetInterruptTracking(terminalSignals);
+      log(`✅ [TERMINATION] Interrupt followed by shell prompt: "${cleanLine}"`);
+      return {
+        isTerminated: true,
+        confidence: 0.95,
+        detectedLine: cleanLine,
+        reason: 'Interrupt followed by shell prompt',
+      };
+    }
+
+    const lowerLine = cleanLine.toLowerCase();
+
+    // Check if this looks like AI output (reduce false positives)
+    const looksLikeAIOutput =
+      this.patternRegistry.isAgentActivity(cleanLine) ||
+      lowerLine.includes('thinking...') ||
+      lowerLine.includes('analyzing...') ||
+      cleanLine.includes('```') ||
+      (cleanLine.includes('[') && cleanLine.includes(']') && cleanLine.length > 25);
+
+    if (!looksLikeAIOutput && cleanLine.length <= 50) {
+      // Validate with recent AI activity check
+      const isValid = this.validateTerminationSignal(terminalId, 0.6);
+
+      if (isValid) {
         this.resetInterruptTracking(terminalSignals);
-        log(`✅ [TERMINATION] Interrupt followed by shell prompt: "${cleanLine}"`);
+        log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
         return {
           isTerminated: true,
-          confidence: 0.95,
+          confidence: 0.6,
           detectedLine: cleanLine,
-          reason: 'Interrupt followed by shell prompt',
+          reason: 'Shell prompt detected',
         };
-      }
-
-      const lowerLine = cleanLine.toLowerCase();
-
-      // Check if this looks like AI output (reduce false positives)
-      const looksLikeAIOutput =
-        this.patternRegistry.isAgentActivity(cleanLine) ||
-        lowerLine.includes('thinking...') ||
-        lowerLine.includes('analyzing...') ||
-        cleanLine.includes('```') ||
-        (cleanLine.includes('[') && cleanLine.includes(']') && cleanLine.length > 25);
-
-      if (!looksLikeAIOutput && cleanLine.length <= 50) {
-        // Validate with recent AI activity check
-        const isValid = this.validateTerminationSignal(terminalId, 0.6);
-
-        if (isValid) {
-          this.resetInterruptTracking(terminalSignals);
-          log(`✅ [TERMINATION] Shell prompt detected: "${cleanLine}"`);
-          return {
-            isTerminated: true,
-            confidence: 0.6,
-            detectedLine: cleanLine,
-            reason: 'Shell prompt detected',
-          };
-        } else {
-          log(`⚠️ [TERMINATION] Shell prompt ignored (recent AI activity): "${cleanLine}"`);
-        }
+      } else {
+        log(`⚠️ [TERMINATION] Shell prompt ignored (recent AI activity): "${cleanLine}"`);
       }
     }
 
-    // 3. Time-based lenient detection
+    return null;
+  }
+
+  /**
+   * Time-based lenient detection after a prolonged absence of AI output.
+   */
+  private checkTimeoutTermination(terminalId: string, cleanLine: string): TerminationResult | null {
     const lastAIOutputEntry = this.detectionCache.get(`${terminalId}_lastAIOutput`);
     const timeSinceLastAIOutput = Date.now() - (lastAIOutputEntry?.timestamp || 0);
 
@@ -483,12 +551,7 @@ export class CliAgentDetectionEngine {
       }
     }
 
-    return {
-      isTerminated: false,
-      confidence: 0,
-      detectedLine: cleanLine,
-      reason: 'No termination pattern matched',
-    };
+    return null;
   }
 
   /**
@@ -718,7 +781,13 @@ export class CliAgentDetectionEngine {
     // Note: LRUCache doesn't have forEach, so we need to work around it
     try {
       // Try to iterate if possible
-      (this.detectionCache as any).forEach((_value: any, key: string) => {
+      // LRUCache has no forEach; this cast preserves the existing runtime behavior where the
+      // missing method throws and triggers the catch-based full-cache-clear fallback below.
+      (
+        this.detectionCache as unknown as {
+          forEach: (callback: (value: DetectionCacheEntry, key: string) => void) => void;
+        }
+      ).forEach((_value: DetectionCacheEntry, key: string) => {
         if (key.includes(terminalId)) {
           keysToDelete.push(key);
         }

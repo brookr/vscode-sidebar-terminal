@@ -74,8 +74,9 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
    * Validate required message properties
    */
   protected validateMessage(message: WebviewMessage, requiredProps: string[]): void {
+    const record = message as unknown as Record<string, unknown>;
     for (const prop of requiredProps) {
-      if (!(prop in message) || (message as any)[prop] === undefined) {
+      if (!(prop in message) || record[prop] === undefined) {
         throw new Error(`Missing required property: ${prop}`);
       }
     }
@@ -91,9 +92,7 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
   protected hasTerminalId(
     message: WebviewMessage
   ): message is WebviewMessage & { terminalId: string } {
-    return (
-      typeof (message as any).terminalId === 'string' && (message as any).terminalId.length > 0
-    );
+    return typeof message.terminalId === 'string' && message.terminalId.length > 0;
   }
 
   /**
@@ -102,7 +101,7 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
   protected hasResizeParams(
     message: WebviewMessage
   ): message is WebviewMessage & { cols: number; rows: number } {
-    const { cols, rows } = message as any;
+    const { cols, rows } = message;
     return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
   }
 
@@ -110,14 +109,16 @@ export abstract class BaseMessageHandler implements IUnifiedMessageHandler, IMes
    * Validate message has input data
    */
   protected hasInputData(message: WebviewMessage): message is WebviewMessage & { data: string } {
-    return typeof (message as any).data === 'string' && (message as any).data.length > 0;
+    return typeof message.data === 'string' && message.data.length > 0;
   }
 
   /**
    * Validate message has settings
    */
-  protected hasSettings(message: WebviewMessage): message is WebviewMessage & { settings: any } {
-    return !!(message as any).settings && typeof (message as any).settings === 'object';
+  protected hasSettings(
+    message: WebviewMessage
+  ): message is WebviewMessage & { settings: NonNullable<WebviewMessage['settings']> } {
+    return !!message.settings && typeof message.settings === 'object';
   }
 
   // =============================================================================

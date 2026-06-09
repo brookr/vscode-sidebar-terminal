@@ -29,7 +29,7 @@ const defaultServiceFactory = (
 ): TerminalPersistencePort => new ExtensionPersistenceService(context, terminalManager);
 
 const defaultHandlerFactory = (service: TerminalPersistencePort): PersistenceMessageHandler =>
-  new PersistenceMessageHandler(service as any);
+  new PersistenceMessageHandler(service as unknown as ExtensionPersistenceService);
 
 export class PersistenceOrchestrator implements vscode.Disposable {
   private readonly persistenceService: TerminalPersistencePort;
@@ -121,9 +121,9 @@ export class PersistenceOrchestrator implements vscode.Disposable {
       const response = await this.handler.handleMessage(persistenceMessage);
 
       await (sendMessage ?? this.sendMessageImpl)({
-        command: responseCommand as any,
+        command: responseCommand as WebviewMessage['command'],
         success: response.success,
-        data: response.data as string | any[] | undefined,
+        data: response.data as string | unknown[] | undefined,
         error: response.error,
         terminalCount: response.terminalCount,
         messageId: normalizedMessage.messageId,
@@ -131,7 +131,7 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     } catch (error) {
       this.logger('❌ [PERSISTENCE] Message handling failed:', error);
       await (sendMessage ?? this.sendMessageImpl)({
-        command: responseCommand as any,
+        command: responseCommand as WebviewMessage['command'],
         success: false,
         error: `Persistence operation failed: ${(error as Error).message}`,
         messageId: normalizedMessage.messageId,
@@ -185,11 +185,15 @@ export class PersistenceOrchestrator implements vscode.Disposable {
     }
   }
 
-  public handleSerializationResponse(serializationData: Record<string, any>): void {
+  public handleSerializationResponse(serializationData: Record<string, unknown>): void {
     this.logger(`📋 [PERSISTENCE-ORCH] Routing serialization response to persistence service`);
 
     if ('handleSerializationResponseMessage' in this.persistenceService) {
-      (this.persistenceService as any).handleSerializationResponseMessage?.(serializationData);
+      (
+        this.persistenceService as TerminalPersistencePort & {
+          handleSerializationResponseMessage?: (data: Record<string, unknown>) => void;
+        }
+      ).handleSerializationResponseMessage?.(serializationData);
       this.logger(`✅ [PERSISTENCE-ORCH] Serialization response forwarded successfully`);
     } else {
       this.logger(

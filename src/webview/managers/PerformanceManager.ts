@@ -77,18 +77,12 @@ export class PerformanceManager extends BaseManager {
       }
 
       if (this.debugLoggingEnabled) {
-        let reason: string;
-        if (isLargeOutput) {
-          reason = 'large output';
-        } else if (bufferFull) {
-          reason = 'buffer full';
-        } else if (isSmallInput) {
-          reason = 'small input (typing)';
-        } else if (this.isCliAgentMode && isModerateOutput) {
-          reason = 'CLI Agent mode';
-        } else {
-          reason = 'unknown';
-        }
+        const reason = this.resolveImmediateFlushReason(
+          isLargeOutput,
+          bufferFull,
+          isSmallInput,
+          isModerateOutput
+        );
         this.logger(`Immediate write: ${normalizedData.length} chars (${reason})`);
       }
     } else {
@@ -100,6 +94,24 @@ export class PerformanceManager extends BaseManager {
         );
       }
     }
+  }
+
+  private resolveImmediateFlushReason(
+    isLargeOutput: boolean,
+    bufferFull: boolean,
+    isSmallInput: boolean,
+    isModerateOutput: boolean
+  ): string {
+    if (isLargeOutput) {
+      return 'large output';
+    } else if (bufferFull) {
+      return 'buffer full';
+    } else if (isSmallInput) {
+      return 'small input (typing)';
+    } else if (this.isCliAgentMode && isModerateOutput) {
+      return 'CLI Agent mode';
+    }
+    return 'unknown';
   }
 
   private getOrCreateBufferEntry(terminal: Terminal): BufferEntry {

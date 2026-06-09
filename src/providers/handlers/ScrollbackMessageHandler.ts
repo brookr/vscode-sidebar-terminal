@@ -14,9 +14,9 @@ import { provider as log } from '../../utils/logger';
 export interface IScrollbackPersistenceService {
   handlePushedScrollbackData?(message: WebviewMessage): void;
   handleScrollbackDataCollected?(data: {
-    terminalId: string;
+    terminalId?: string;
     requestId?: string;
-    scrollbackData: unknown[];
+    scrollbackData?: unknown[];
   }): void;
   handleScrollbackRefreshRequest?(message: WebviewMessage): Promise<void>;
 }
@@ -58,9 +58,9 @@ export class ScrollbackMessageHandler {
    * Handle scrollbackDataCollected messages from WebView
    */
   public async handleScrollbackDataCollected(message: WebviewMessage): Promise<void> {
-    const scrollbackData = (message as any)?.scrollbackData ?? (message as any)?.scrollbackContent;
-    const requestId = (message as any)?.requestId;
-    const terminalId = (message as any)?.terminalId;
+    const scrollbackData = message.scrollbackData ?? message.scrollbackContent;
+    const requestId = message.requestId;
+    const terminalId = message.terminalId;
 
     if (!Array.isArray(scrollbackData)) {
       log('⚠️ [PROVIDER] scrollbackDataCollected missing scrollbackData array');
@@ -81,7 +81,7 @@ export class ScrollbackMessageHandler {
     }
 
     // Fallback: treat as pushScrollbackData for cache update
-    (message as any).command = 'pushScrollbackData';
+    message.command = 'pushScrollbackData';
     await this.handlePushScrollbackData(message);
   }
 

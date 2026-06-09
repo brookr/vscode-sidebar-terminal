@@ -323,3 +323,4 @@ export namespace DOMUtils {
     (element ?? document.body).offsetHeight;
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace */

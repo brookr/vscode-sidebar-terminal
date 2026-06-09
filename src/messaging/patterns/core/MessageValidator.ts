@@ -115,7 +115,10 @@ export class MessageValidator {
    */
   public validateRequired(message: WebviewMessage, fields: string[]): void {
     for (const field of fields) {
-      if (!(field in message) || (message as any)[field] === undefined) {
+      if (
+        !(field in message) ||
+        (message as unknown as Record<string, unknown>)[field] === undefined
+      ) {
         throw new MessageValidationError(
           `Missing required field: ${field}`,
           field,
@@ -160,9 +163,8 @@ export class MessageValidator {
   public hasTerminalId(
     message: WebviewMessage
   ): message is WebviewMessage & { terminalId: string } {
-    return (
-      typeof (message as any).terminalId === 'string' && (message as any).terminalId.length > 0
-    );
+    const terminalId = (message as unknown as Record<string, unknown>).terminalId;
+    return typeof terminalId === 'string' && terminalId.length > 0;
   }
 
   /**
@@ -171,7 +173,7 @@ export class MessageValidator {
   public hasResizeParams(
     message: WebviewMessage
   ): message is WebviewMessage & { cols: number; rows: number } {
-    const { cols, rows } = message as any;
+    const { cols, rows } = message as unknown as Record<string, unknown>;
     return typeof cols === 'number' && typeof rows === 'number' && cols > 0 && rows > 0;
   }
 
@@ -179,14 +181,15 @@ export class MessageValidator {
    * Validate message has input data
    */
   public hasInputData(message: WebviewMessage): message is WebviewMessage & { data: string } {
-    return typeof (message as any).data === 'string';
+    return typeof (message as unknown as Record<string, unknown>).data === 'string';
   }
 
   /**
    * Validate message has settings
    */
   public hasSettings(message: WebviewMessage): message is WebviewMessage & { settings: unknown } {
-    return (message as any).settings !== undefined && typeof (message as any).settings === 'object';
+    const settings = (message as unknown as Record<string, unknown>).settings;
+    return settings !== undefined && typeof settings === 'object';
   }
 
   /**
@@ -200,7 +203,10 @@ export class MessageValidator {
     // Check required fields
     if (rule.required) {
       for (const field of rule.required) {
-        if (!(field in message) || (message as any)[field] === undefined) {
+        if (
+          !(field in message) ||
+          (message as unknown as Record<string, unknown>)[field] === undefined
+        ) {
           errors.push(`Missing required field: ${field}`);
         }
       }
@@ -210,7 +216,7 @@ export class MessageValidator {
     if (rule.types) {
       for (const [field, expectedType] of Object.entries(rule.types)) {
         if (field in message) {
-          const value = (message as any)[field];
+          const value = (message as unknown as Record<string, unknown>)[field];
           const actualType = Array.isArray(value) ? 'array' : typeof value;
 
           if (actualType !== expectedType) {
@@ -244,7 +250,7 @@ const DEFAULT_VALIDATION_RULES: Record<string, IMessageValidationRule> = {
     required: ['cols', 'rows'],
     types: { cols: 'number', rows: 'number', terminalId: 'string' },
     custom: (msg) => {
-      const { cols, rows } = msg as any;
+      const { cols, rows } = msg as { cols: number; rows: number };
       if (cols <= 0 || rows <= 0) {
         return 'Resize dimensions must be positive';
       }

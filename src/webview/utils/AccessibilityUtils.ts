@@ -111,7 +111,7 @@ export class FocusManager {
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key !== 'Tab') return;
 
       if (e.shiftKey) {
@@ -288,7 +288,7 @@ export class KeyboardNavigationHelper {
     callback: () => void,
     description: string
   ): () => void {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (keys.includes(e.key)) {
         e.preventDefault();
         callback();

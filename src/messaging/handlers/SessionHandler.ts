@@ -5,6 +5,7 @@
  * scrollback management, and session persistence.
  */
 
+import { Terminal, IBuffer } from '@xterm/xterm';
 import { WebviewMessage } from '../../types/common';
 import { IMessageHandlerContext, MessagePriority } from '../UnifiedMessageDispatcher';
 import { BaseMessageHandler } from './BaseMessageHandler';
@@ -19,6 +20,7 @@ import {
   showSessionSaveError,
   showSessionCleared,
   showSessionRestoreSkipped,
+  showTerminalRestoreError,
 } from '../../webview/utils/NotificationUtils';
 
 export class SessionHandler extends BaseMessageHandler {
@@ -236,12 +238,9 @@ export class SessionHandler extends BaseMessageHandler {
     const error = (message.error as string) || 'Unknown error';
     context.logger.warn(`Terminal restore error: ${terminalName} - ${error}`);
 
-    // Use try-catch to handle potential circular dependency
+    // Guard against unexpected runtime errors when surfacing the notification.
     try {
-      const notificationUtils = require('../../webview/utils/NotificationUtils');
-      if (notificationUtils.showTerminalRestoreError) {
-        notificationUtils.showTerminalRestoreError(terminalName, error);
-      }
+      showTerminalRestoreError(terminalName, error);
     } catch (importError) {
       context.logger.error('Failed to show terminal restore error notification:', importError);
     }
@@ -391,11 +390,11 @@ export class SessionHandler extends BaseMessageHandler {
    * Extract scrollback content from xterm terminal (improved version)
    */
   private extractScrollbackFromXterm(
-    terminal: any,
+    terminal: Terminal,
     maxLines: number
   ): Array<{ content: string; type?: 'output' | 'input' | 'error'; timestamp?: number }> {
     this.logActivity(
-      undefined as any,
+      undefined as unknown as IMessageHandlerContext,
       `Extracting scrollback from xterm terminal (max ${maxLines} lines)`
     );
 
@@ -417,7 +416,7 @@ export class SessionHandler extends BaseMessageHandler {
       const baseY = buffer.baseY;
 
       this.logActivity(
-        undefined as any,
+        undefined as unknown as IMessageHandlerContext,
         `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
       );
 
@@ -426,28 +425,14 @@ export class SessionHandler extends BaseMessageHandler {
       const endLine = bufferLength;
 
       this.logActivity(
-        undefined as any,
+        undefined as unknown as IMessageHandlerContext,
         `Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
       );
 
       for (let i = startLine; i < endLine; i++) {
-        try {
-          const line = buffer.getLine(i);
-          if (line) {
-            const content = line.translateToString(true); // trim whitespace
-
-            // Include non-empty lines and preserve some empty lines for structure
-            if (content.trim() || scrollbackLines.length > 0) {
-              scrollbackLines.push({
-                content: content,
-                type: 'output',
-                timestamp: Date.now(),
-              });
-            }
-          }
-        } catch (lineError) {
-          this.logActivity(undefined as any, `Error extracting line ${i}: ${String(lineError)}`);
-          continue;
+        const entry = this.extractScrollbackLine(buffer, i, scrollbackLines.length > 0);
+        if (entry) {
+          scrollbackLines.push(entry);
         }
       }
 
@@ -462,11 +447,14 @@ export class SessionHandler extends BaseMessageHandler {
       }
 
       this.logActivity(
-        undefined as any,
+        undefined as unknown as IMessageHandlerContext,
         `Successfully extracted ${scrollbackLines.length} lines from terminal buffer`
       );
     } catch (error) {
-      this.logActivity(undefined as any, `Error accessing terminal buffer: ${String(error)}`);
+      this.logActivity(
+        undefined as unknown as IMessageHandlerContext,
+        `Error accessing terminal buffer: ${String(error)}`
+      );
       throw error;
     }
 
@@ -474,17 +462,59 @@ export class SessionHandler extends BaseMessageHandler {
   }
 
   /**
+   * Extract a single scrollback line from the xterm buffer.
+   *
+   * Returns a line entry, or `null` when the line is empty (and nothing has
+   * been collected yet) or cannot be read. Empty lines are preserved once
+   * collection has started so that the buffer's structure is retained.
+   */
+  private extractScrollbackLine(
+    buffer: IBuffer,
+    index: number,
+    hasCollected: boolean
+  ): { content: string; type?: 'output' | 'input' | 'error'; timestamp?: number } | null {
+    try {
+      const line = buffer.getLine(index);
+      if (!line) {
+        return null;
+      }
+
+      const content = line.translateToString(true); // trim whitespace
+
+      // Include non-empty lines and preserve some empty lines for structure
+      if (content.trim() || hasCollected) {
+        return {
+          content: content,
+          type: 'output',
+          timestamp: Date.now(),
+        };
+      }
+
+      return null;
+    } catch (lineError) {
+      this.logActivity(
+        undefined as unknown as IMessageHandlerContext,
+        `Error extracting line ${index}: ${String(lineError)}`
+      );
+      return null;
+    }
+  }
+
+  /**
    * Restore scrollback content to xterm terminal
    */
   private restoreScrollbackToXterm(
-    terminal: any,
+    terminal: Terminal,
     scrollbackContent: Array<{
       content: string;
       type?: 'output' | 'input' | 'error';
       timestamp?: number;
     }>
   ): void {
-    this.logActivity(undefined as any, `Restoring ${scrollbackContent.length} lines to terminal`);
+    this.logActivity(
+      undefined as unknown as IMessageHandlerContext,
+      `Restoring ${scrollbackContent.length} lines to terminal`
+    );
 
     if (!terminal) {
       throw new Error('Terminal instance not provided');
@@ -495,6 +525,9 @@ export class SessionHandler extends BaseMessageHandler {
       terminal.writeln(line.content);
     }
 
-    this.logActivity(undefined as any, `Restored ${scrollbackContent.length} lines to terminal`);
+    this.logActivity(
+      undefined as unknown as IMessageHandlerContext,
+      `Restored ${scrollbackContent.length} lines to terminal`
+    );
   }
 }

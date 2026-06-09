@@ -91,52 +91,11 @@ export class TerminalInteractionService {
     terminal: Terminal,
     terminalContent: HTMLElement
   ): void {
-    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) => {
-      const mac = isMacPlatform();
+    terminal.attachCustomKeyEventHandler((event: KeyboardEvent) =>
+      this.shouldXtermHandleKeyEvent(event)
+    );
 
-      if (
-        (mac && event.metaKey && event.key === 'v') ||
-        (event.ctrlKey && event.key === 'v' && !event.shiftKey)
-      ) {
-        terminalLogger.info('📋 Paste keydown - bypassing xterm.js key handler');
-        return false;
-      }
-
-      if (
-        document.body.classList.contains('panel-navigation-enabled') &&
-        event.ctrlKey &&
-        !event.shiftKey &&
-        !event.altKey &&
-        !event.metaKey &&
-        event.key.toLowerCase() === 'p'
-      ) {
-        return false;
-      }
-
-      if (document.body.classList.contains('panel-navigation-mode')) {
-        const key = event.key.toLowerCase();
-        if (
-          key === 'h' ||
-          key === 'j' ||
-          key === 'k' ||
-          key === 'l' ||
-          key === 'arrowleft' ||
-          key === 'arrowright' ||
-          key === 'arrowup' ||
-          key === 'arrowdown' ||
-          key === 'escape' ||
-          key === 'r' ||
-          key === 'd' ||
-          key === 'x'
-        ) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-
-    const pasteHandler = (event: ClipboardEvent) => {
+    const pasteHandler = (event: ClipboardEvent): void => {
       const clipboardData = event.clipboardData;
       if (!clipboardData) {
         terminalLogger.warn('📋 Paste event has no clipboardData');
@@ -182,6 +141,63 @@ export class TerminalInteractionService {
       pasteHandler as EventListener,
       true
     );
+  }
+
+  /**
+   * Custom key event handler for xterm.js. Returns false to let our own
+   * handlers (paste / panel-navigation) process the key instead of xterm.js,
+   * or true to let xterm.js handle it normally.
+   */
+  private shouldXtermHandleKeyEvent(event: KeyboardEvent): boolean {
+    const mac = isMacPlatform();
+
+    if (
+      (mac && event.metaKey && event.key === 'v') ||
+      (event.ctrlKey && event.key === 'v' && !event.shiftKey)
+    ) {
+      terminalLogger.info('📋 Paste keydown - bypassing xterm.js key handler');
+      return false;
+    }
+
+    if (this.isPanelNavigationToggleKey(event) || this.isPanelNavigationModeKey(event)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  /** Ctrl+P toggles panel navigation when the enabling class is present. */
+  private isPanelNavigationToggleKey(event: KeyboardEvent): boolean {
+    return (
+      document.body.classList.contains('panel-navigation-enabled') &&
+      event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey &&
+      !event.metaKey &&
+      event.key.toLowerCase() === 'p'
+    );
+  }
+
+  /** Keys reserved for panel-navigation mode while it is active. */
+  private isPanelNavigationModeKey(event: KeyboardEvent): boolean {
+    if (!document.body.classList.contains('panel-navigation-mode')) {
+      return false;
+    }
+    const panelNavigationKeys = [
+      'h',
+      'j',
+      'k',
+      'l',
+      'arrowleft',
+      'arrowright',
+      'arrowup',
+      'arrowdown',
+      'escape',
+      'r',
+      'd',
+      'x',
+    ];
+    return panelNavigationKeys.includes(event.key.toLowerCase());
   }
 
   private setupShellIntegration(terminal: Terminal, terminalId: string): void {

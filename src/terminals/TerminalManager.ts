@@ -193,7 +193,11 @@ export class TerminalManager {
 
   // === Process Coordination ===
 
-  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(
+    terminalId: string,
+    ptyProcess: unknown,
+    safeMode: boolean
+  ): void {
     this._processCoordinator.initializeShellForTerminal(terminalId, ptyProcess, safeMode);
   }
 
@@ -443,7 +447,7 @@ export class TerminalManager {
 
   // === Service Management ===
 
-  public setShellIntegrationService(service: any): void {
+  public setShellIntegrationService(service: ShellIntegrationService): void {
     this._shellIntegrationService = service;
   }
 

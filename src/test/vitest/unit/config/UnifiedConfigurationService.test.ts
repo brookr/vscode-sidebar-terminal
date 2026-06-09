@@ -159,6 +159,7 @@ describe('UnifiedConfigurationService', () => {
 
     it('should fire configuration change event', async () => {
       let changeEvent: any = null;
+      // eslint-disable-next-line no-restricted-syntax -- test-scoped subscription; service is discarded after the test
       service.onDidChangeConfiguration((event) => {
         changeEvent = event;
       });
@@ -703,6 +704,7 @@ describe('UnifiedConfigurationService', () => {
     it('should emit configuration change events', async () => {
       let eventResult: any = null;
 
+      // eslint-disable-next-line no-restricted-syntax -- test-scoped subscription; service is discarded after the test
       service.onDidChangeConfiguration((event) => {
         eventResult = event;
       });

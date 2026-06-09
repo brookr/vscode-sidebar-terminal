@@ -123,7 +123,7 @@ export interface ITerminalWithAddons {
       };
     }>;
   };
-  _terminal?: any; // xterm.js Terminal instance
+  _terminal?: unknown; // xterm.js Terminal instance
 }
 
 // ===== Terminal Manager Interfaces =====

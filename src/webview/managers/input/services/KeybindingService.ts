@@ -209,19 +209,20 @@ export class KeybindingService {
    * Build keybinding map based on platform
    */
   private buildKeybindingMap(isMac: boolean): Record<string, string> {
+    const mod = isMac ? 'meta' : 'ctrl';
     return {
       // Terminal management - cross-platform
-      [`${isMac ? 'meta' : 'ctrl'}+shift+\``]: 'workbench.action.terminal.new',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+5`]: 'workbench.action.terminal.split',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+w`]: 'workbench.action.terminal.kill',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+k`]: 'workbench.action.terminal.clear',
+      [`${mod}+shift+\``]: 'workbench.action.terminal.new',
+      [`${mod}+shift+5`]: 'workbench.action.terminal.split',
+      [`${mod}+shift+w`]: 'workbench.action.terminal.kill',
+      [`${mod}+shift+k`]: 'workbench.action.terminal.clear',
 
       // Navigation - cross-platform
-      [`${isMac ? 'meta' : 'ctrl'}+p`]: 'workbench.action.quickOpen',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+p`]: 'workbench.action.showCommands',
-      [`${isMac ? 'meta' : 'ctrl'}+tab`]: 'workbench.action.terminal.focusNext',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+tab`]: 'workbench.action.terminal.focusPrevious',
-      [`${isMac ? 'meta' : 'ctrl'}+\``]: 'workbench.action.terminal.toggleTerminal',
+      [`${mod}+p`]: 'workbench.action.quickOpen',
+      [`${mod}+shift+p`]: 'workbench.action.showCommands',
+      [`${mod}+tab`]: 'workbench.action.terminal.focusNext',
+      [`${mod}+shift+tab`]: 'workbench.action.terminal.focusPrevious',
+      [`${mod}+\``]: 'workbench.action.terminal.toggleTerminal',
 
       // Scrolling
       'shift+pageup': 'workbench.action.terminal.scrollUp',
@@ -244,37 +245,37 @@ export class KeybindingService {
       'ctrl+arrowdown': 'workbench.action.terminal.scrollToNextCommand',
 
       // Panel management
-      [`${isMac ? 'meta' : 'ctrl'}+j`]: 'workbench.action.togglePanel',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+u`]: 'workbench.action.closePanel',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+e`]: 'workbench.action.toggleSidebarVisibility',
+      [`${mod}+j`]: 'workbench.action.togglePanel',
+      [`${mod}+shift+u`]: 'workbench.action.closePanel',
+      [`${mod}+shift+e`]: 'workbench.action.toggleSidebarVisibility',
 
       // Development tools
       f12: 'workbench.action.toggleDevTools',
-      [`${isMac ? 'meta' : 'ctrl'}+r`]: 'workbench.action.reloadWindow',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+r`]: 'workbench.action.reloadWindowWithExtensionsDisabled',
+      [`${mod}+r`]: 'workbench.action.reloadWindow',
+      [`${mod}+shift+r`]: 'workbench.action.reloadWindowWithExtensionsDisabled',
 
       // Zoom
-      [`${isMac ? 'meta' : 'ctrl'}+=`]: 'workbench.action.zoomIn',
-      [`${isMac ? 'meta' : 'ctrl'}+-`]: 'workbench.action.zoomOut',
-      [`${isMac ? 'meta' : 'ctrl'}+0`]: 'workbench.action.zoomReset',
+      [`${mod}+=`]: 'workbench.action.zoomIn',
+      [`${mod}+-`]: 'workbench.action.zoomOut',
+      [`${mod}+0`]: 'workbench.action.zoomReset',
 
       // Copy/paste
-      [`${isMac ? 'meta' : 'ctrl'}+c`]: 'workbench.action.terminal.copySelection',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+c`]: 'workbench.action.terminal.copySelection',
-      [`${isMac ? 'meta' : 'ctrl'}+v`]: 'workbench.action.terminal.paste',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+v`]: 'workbench.action.terminal.paste',
-      [`${isMac ? 'meta' : 'ctrl'}+a`]: 'workbench.action.terminal.selectAll',
+      [`${mod}+c`]: 'workbench.action.terminal.copySelection',
+      [`${mod}+shift+c`]: 'workbench.action.terminal.copySelection',
+      [`${mod}+v`]: 'workbench.action.terminal.paste',
+      [`${mod}+shift+v`]: 'workbench.action.terminal.paste',
+      [`${mod}+a`]: 'workbench.action.terminal.selectAll',
 
       // Find
-      [`${isMac ? 'meta' : 'ctrl'}+f`]: 'workbench.action.terminal.focusFind',
-      [`${isMac ? 'meta' : 'ctrl'}+g`]: 'workbench.action.terminal.findNext',
-      [`${isMac ? 'meta' : 'ctrl'}+shift+g`]: 'workbench.action.terminal.findPrevious',
+      [`${mod}+f`]: 'workbench.action.terminal.focusFind',
+      [`${mod}+g`]: 'workbench.action.terminal.findNext',
+      [`${mod}+shift+g`]: 'workbench.action.terminal.findPrevious',
 
       // Terminal size
-      [`${isMac ? 'meta' : 'ctrl'}+shift+=`]: 'workbench.action.terminal.sizeToContentWidth',
+      [`${mod}+shift+=`]: 'workbench.action.terminal.sizeToContentWidth',
 
       // Additional shortcuts
-      [`${isMac ? 'meta' : 'ctrl'}+shift+c`]: 'workbench.action.terminal.openNativeConsole',
+      [`${mod}+shift+c`]: 'workbench.action.terminal.openNativeConsole',
       f1: 'workbench.action.showCommands',
       escape: 'workbench.action.terminal.hideFind',
 

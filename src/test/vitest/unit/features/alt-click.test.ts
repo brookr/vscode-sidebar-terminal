@@ -3,10 +3,10 @@
  * Tests the VS Code standard Alt+Click cursor positioning feature
  */
 
-/* eslint-disable @typescript-eslint/no-unused-vars */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 // Define MockVSCode interface if not already defined (or reuse if exported)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- documentation scaffold describing the mock shape used in this suite
 interface MockVSCode {
   workspace: {
     getConfiguration: ReturnType<typeof vi.fn>;
@@ -122,6 +122,7 @@ describe('Alt+Click Cursor Positioning', () => {
     it('should detect high-frequency output scenarios', () => {
       // Simulate high-frequency output detection
       const outputChunks = ['chunk1', 'chunk2', 'chunk3', 'chunk4', 'chunk5'];
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- documents the conceptual time window for the scenario
       const timeWindow = 2000; // 2 seconds
       const threshold = 500; // characters
 

@@ -33,6 +33,32 @@ const CssClasses = {
 
 const POST_RENDERER_SETUP_DELAY_MS = 200;
 
+/**
+ * Return the first truthy value, falling back to the final (required) value.
+ * Mirrors a chain of `||` operators while keeping callers flat.
+ */
+function firstTruthy<T>(...values: [...(T | undefined | null)[], T]): T {
+  for (const value of values) {
+    if (value) {
+      return value as T;
+    }
+  }
+  return values[values.length - 1] as T;
+}
+
+/**
+ * Return the first non-null/undefined value, falling back to the final (required) value.
+ * Mirrors a chain of `??` operators while keeping callers flat.
+ */
+function firstNonNullish<T>(...values: [...(T | undefined | null)[], T]): T {
+  for (const value of values) {
+    if (value !== undefined && value !== null) {
+      return value as T;
+    }
+  }
+  return values[values.length - 1] as T;
+}
+
 export class TerminalAppearanceService {
   constructor(private readonly dependencies: IDependencies) {}
 
@@ -191,97 +217,164 @@ export class TerminalAppearanceService {
     config: TerminalConfig | undefined,
     configManager: Pick<IConfigManager, 'getCurrentFontSettings'> | undefined
   ): { fontSettings: WebViewFontSettings | undefined; fontOverrides: Partial<ITerminalOptions> } {
+    const currentFontSettings = this.resolveFontSettings(config, configManager);
+    const fontOverrides = this.buildFontOverrides(currentFontSettings);
+    return { fontSettings: currentFontSettings, fontOverrides };
+  }
+
+  /**
+   * Resolve the effective font settings from direct config fields, embedded
+   * fontSettings, and the config manager fallback (in that precedence order).
+   */
+  private resolveFontSettings(
+    config: TerminalConfig | undefined,
+    configManager: Pick<IConfigManager, 'getCurrentFontSettings'> | undefined
+  ): WebViewFontSettings | undefined {
     const configFontSettings = (config as { fontSettings?: WebViewFontSettings } | undefined)
       ?.fontSettings;
     const directFontFamily = (config as { fontFamily?: string } | undefined)?.fontFamily;
     const directFontSize = (config as { fontSize?: number } | undefined)?.fontSize;
 
-    let currentFontSettings: WebViewFontSettings | undefined;
-    if (directFontFamily || directFontSize) {
-      const fallbackFontSettings = configManager?.getCurrentFontSettings?.();
-      currentFontSettings = {
-        fontFamily:
-          directFontFamily ||
-          configFontSettings?.fontFamily ||
-          fallbackFontSettings?.fontFamily ||
-          'monospace',
-        fontSize:
-          directFontSize || configFontSettings?.fontSize || fallbackFontSettings?.fontSize || 14,
-        fontWeight:
-          (config as { fontWeight?: string } | undefined)?.fontWeight ||
-          configFontSettings?.fontWeight ||
-          FontDefaults.FONT_WEIGHT,
-        fontWeightBold:
-          (config as { fontWeightBold?: string } | undefined)?.fontWeightBold ||
-          configFontSettings?.fontWeightBold ||
-          FontDefaults.FONT_WEIGHT_BOLD,
-        lineHeight:
-          (config as { lineHeight?: number } | undefined)?.lineHeight ||
-          configFontSettings?.lineHeight ||
-          FontDefaults.LINE_HEIGHT,
-        letterSpacing:
-          (config as { letterSpacing?: number } | undefined)?.letterSpacing ??
-          configFontSettings?.letterSpacing ??
-          FontDefaults.LETTER_SPACING,
-      };
-    } else if (configFontSettings) {
-      currentFontSettings = configFontSettings;
-    } else {
-      currentFontSettings = configManager?.getCurrentFontSettings?.();
+    if (!directFontFamily && !directFontSize) {
+      return configFontSettings ?? configManager?.getCurrentFontSettings?.();
     }
 
+    const fallbackFontSettings = configManager?.getCurrentFontSettings?.();
+    return this.buildExplicitFontSettings(
+      config,
+      configFontSettings,
+      fallbackFontSettings,
+      directFontFamily,
+      directFontSize
+    );
+  }
+
+  /**
+   * Build font settings from explicit config values, layering embedded
+   * fontSettings and config-manager fallbacks beneath each direct field.
+   */
+  private buildExplicitFontSettings(
+    config: TerminalConfig | undefined,
+    configFontSettings: WebViewFontSettings | undefined,
+    fallbackFontSettings: WebViewFontSettings | undefined,
+    directFontFamily: string | undefined,
+    directFontSize: number | undefined
+  ): WebViewFontSettings {
+    const directConfig = config as
+      | {
+          fontWeight?: string;
+          fontWeightBold?: string;
+          lineHeight?: number;
+          letterSpacing?: number;
+        }
+      | undefined;
+
+    return {
+      fontFamily: firstTruthy(
+        directFontFamily,
+        configFontSettings?.fontFamily,
+        fallbackFontSettings?.fontFamily,
+        'monospace'
+      ),
+      fontSize: firstTruthy(
+        directFontSize,
+        configFontSettings?.fontSize,
+        fallbackFontSettings?.fontSize,
+        14
+      ),
+      fontWeight: firstTruthy(
+        directConfig?.fontWeight,
+        configFontSettings?.fontWeight,
+        FontDefaults.FONT_WEIGHT
+      ),
+      fontWeightBold: firstTruthy(
+        directConfig?.fontWeightBold,
+        configFontSettings?.fontWeightBold,
+        FontDefaults.FONT_WEIGHT_BOLD
+      ),
+      lineHeight: firstTruthy(
+        directConfig?.lineHeight,
+        configFontSettings?.lineHeight,
+        FontDefaults.LINE_HEIGHT
+      ),
+      letterSpacing: firstNonNullish(
+        directConfig?.letterSpacing,
+        configFontSettings?.letterSpacing,
+        FontDefaults.LETTER_SPACING
+      ),
+    };
+  }
+
+  /**
+   * Build the xterm option overrides for the resolved font settings, applying
+   * only values that pass validation.
+   */
+  private buildFontOverrides(
+    currentFontSettings: WebViewFontSettings | undefined
+  ): Partial<ITerminalOptions> {
     const fontOverrides: Partial<ITerminalOptions> = {};
-    if (currentFontSettings) {
-      if (
-        typeof currentFontSettings.fontFamily === 'string' &&
-        currentFontSettings.fontFamily.trim()
-      ) {
-        fontOverrides.fontFamily = currentFontSettings.fontFamily.trim();
-      }
-      if (typeof currentFontSettings.fontSize === 'number' && currentFontSettings.fontSize > 0) {
-        fontOverrides.fontSize = currentFontSettings.fontSize;
-      }
-      if (
-        typeof currentFontSettings.fontWeight === 'string' &&
-        currentFontSettings.fontWeight.trim()
-      ) {
-        fontOverrides.fontWeight =
-          currentFontSettings.fontWeight.trim() as ITerminalOptions['fontWeight'];
-      }
-      if (
-        typeof currentFontSettings.fontWeightBold === 'string' &&
-        currentFontSettings.fontWeightBold.trim()
-      ) {
-        fontOverrides.fontWeightBold =
-          currentFontSettings.fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
-      }
-      if (
-        typeof currentFontSettings.lineHeight === 'number' &&
-        currentFontSettings.lineHeight > 0
-      ) {
-        fontOverrides.lineHeight = currentFontSettings.lineHeight;
-      }
-      if (typeof currentFontSettings.letterSpacing === 'number') {
-        fontOverrides.letterSpacing = currentFontSettings.letterSpacing;
-      }
-      if (currentFontSettings.cursorStyle) {
-        fontOverrides.cursorStyle = currentFontSettings.cursorStyle;
-      }
-      if (
-        typeof currentFontSettings.cursorWidth === 'number' &&
-        currentFontSettings.cursorWidth > 0
-      ) {
-        fontOverrides.cursorWidth = currentFontSettings.cursorWidth;
-      }
-      if (typeof currentFontSettings.drawBoldTextInBrightColors === 'boolean') {
-        fontOverrides.drawBoldTextInBrightColors = currentFontSettings.drawBoldTextInBrightColors;
-      }
-      if (typeof currentFontSettings.minimumContrastRatio === 'number') {
-        fontOverrides.minimumContrastRatio = currentFontSettings.minimumContrastRatio;
-      }
+    if (!currentFontSettings) {
+      return fontOverrides;
     }
 
-    return { fontSettings: currentFontSettings, fontOverrides };
+    this.applyTypographyOverrides(fontOverrides, currentFontSettings);
+    this.applyCursorAndRenderingOverrides(fontOverrides, currentFontSettings);
+
+    return fontOverrides;
+  }
+
+  /**
+   * Apply validated typography fields (family, size, weight, spacing) to the overrides.
+   */
+  private applyTypographyOverrides(
+    fontOverrides: Partial<ITerminalOptions>,
+    currentFontSettings: WebViewFontSettings
+  ): void {
+    const { fontFamily, fontSize, fontWeight, fontWeightBold, lineHeight, letterSpacing } =
+      currentFontSettings;
+
+    if (typeof fontFamily === 'string' && fontFamily.trim()) {
+      fontOverrides.fontFamily = fontFamily.trim();
+    }
+    if (typeof fontSize === 'number' && fontSize > 0) {
+      fontOverrides.fontSize = fontSize;
+    }
+    if (typeof fontWeight === 'string' && fontWeight.trim()) {
+      fontOverrides.fontWeight = fontWeight.trim() as ITerminalOptions['fontWeight'];
+    }
+    if (typeof fontWeightBold === 'string' && fontWeightBold.trim()) {
+      fontOverrides.fontWeightBold = fontWeightBold.trim() as ITerminalOptions['fontWeightBold'];
+    }
+    if (typeof lineHeight === 'number' && lineHeight > 0) {
+      fontOverrides.lineHeight = lineHeight;
+    }
+    if (typeof letterSpacing === 'number') {
+      fontOverrides.letterSpacing = letterSpacing;
+    }
+  }
+
+  /**
+   * Apply validated cursor and rendering fields to the overrides.
+   */
+  private applyCursorAndRenderingOverrides(
+    fontOverrides: Partial<ITerminalOptions>,
+    currentFontSettings: WebViewFontSettings
+  ): void {
+    const { cursorStyle, cursorWidth, drawBoldTextInBrightColors, minimumContrastRatio } =
+      currentFontSettings;
+
+    if (cursorStyle) {
+      fontOverrides.cursorStyle = cursorStyle;
+    }
+    if (typeof cursorWidth === 'number' && cursorWidth > 0) {
+      fontOverrides.cursorWidth = cursorWidth;
+    }
+    if (typeof drawBoldTextInBrightColors === 'boolean') {
+      fontOverrides.drawBoldTextInBrightColors = drawBoldTextInBrightColors;
+    }
+    if (typeof minimumContrastRatio === 'number') {
+      fontOverrides.minimumContrastRatio = minimumContrastRatio;
+    }
   }
 
   private updateContainerBackgrounds(

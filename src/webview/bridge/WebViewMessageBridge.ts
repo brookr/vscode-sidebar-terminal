@@ -151,6 +151,7 @@ export class WebViewMessageBridge implements IWebViewCommunicationBridge {
       const message = event.data as Message;
       await this.handleFromExtension(message);
     };
+    // eslint-disable-next-line no-restricted-syntax -- handler stored in this._boundMessageHandler and removed via removeEventListener in dispose()
     window.addEventListener('message', this._boundMessageHandler);
   }
 

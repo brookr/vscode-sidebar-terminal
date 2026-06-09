@@ -157,7 +157,11 @@ export class TerminalCreationService implements Disposable {
     this.mouseTrackingService = new MouseTrackingService();
 
     this.appearanceService = new TerminalAppearanceService({
-      coordinator: coordinator as any,
+      // IManagerCoordinator has no `currentSettings` property; the appearance
+      // service reads it optionally and falls back (pre-existing behavior).
+      coordinator: coordinator as unknown as ConstructorParameters<
+        typeof TerminalAppearanceService
+      >[0]['coordinator'],
     });
     this.domService = new TerminalDomService({ splitManager, coordinator });
     this.interactionService = new TerminalInteractionService({
@@ -250,7 +254,9 @@ export class TerminalCreationService implements Disposable {
           configManager,
           uiManager,
           applyPostOpenSettings: (params) =>
-            this.appearanceService.applyPostOpenSettings(params as any),
+            this.appearanceService.applyPostOpenSettings(
+              params as Parameters<TerminalAppearanceService['applyPostOpenSettings']>[0]
+            ),
         });
 
         // Phase 6: Rendering, registration & finalization
@@ -268,22 +274,17 @@ export class TerminalCreationService implements Disposable {
           terminalConfig,
           linkModifier,
           config,
-          uiManager: uiManager as any,
+          uiManager: uiManager as unknown as Parameters<
+            TerminalLifecycleService['finalizeTerminalSetup']
+          >[0]['uiManager'],
         });
 
-        const elapsed = performanceMonitor.endTimer(
-          `terminal-creation-attempt-${terminalId}-${currentRetry}`
-        );
-        terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
-
-        // Final refresh after all setup (re-apply theme after WebGL/DOM renderer setup)
-        this.appearanceService.schedulePostRendererRefresh({
-          terminalId,
+        this.finishCreationAttempt(performanceMonitor, terminalId, currentRetry, {
           terminal,
           container,
           terminalContent,
           configManager,
-          uiManager: uiManager as any,
+          uiManager,
         });
 
         return terminalInstance.terminal;
@@ -309,6 +310,39 @@ export class TerminalCreationService implements Disposable {
     };
 
     return attemptCreation();
+  }
+
+  /**
+   * End the creation timer, log completion, and schedule the post-renderer
+   * theme refresh (re-applies theme after WebGL/DOM renderer setup).
+   */
+  private finishCreationAttempt(
+    performanceMonitor: PerformanceMonitor,
+    terminalId: string,
+    currentRetry: number,
+    refresh: {
+      terminal: Terminal;
+      container: HTMLElement;
+      terminalContent: HTMLElement;
+      configManager: ReturnType<NonNullable<IManagerCoordinator['getManagers']>>['config'];
+      uiManager: ReturnType<NonNullable<IManagerCoordinator['getManagers']>>['ui'];
+    }
+  ): void {
+    const elapsed = performanceMonitor.endTimer(
+      `terminal-creation-attempt-${terminalId}-${currentRetry}`
+    );
+    terminalLogger.info(`✅ Terminal creation completed: ${terminalId} in ${elapsed}ms`);
+
+    this.appearanceService.schedulePostRendererRefresh({
+      terminalId,
+      terminal: refresh.terminal,
+      container: refresh.container,
+      terminalContent: refresh.terminalContent,
+      configManager: refresh.configManager,
+      uiManager: refresh.uiManager as Parameters<
+        TerminalAppearanceService['schedulePostRendererRefresh']
+      >[0]['uiManager'],
+    });
   }
 
   // ============================================================================

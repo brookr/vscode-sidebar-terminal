@@ -350,3 +350,5 @@ export const setupMockTerminalManagerForCliAgent = (
 
   return mockTerminalManager;
 };
+
+/* eslint-enable @typescript-eslint/no-unused-vars */

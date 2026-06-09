@@ -50,7 +50,7 @@ describe('TerminalProcessCoordinator', () => {
       ptyProcess: mockPtyProcess,
       processState: ProcessState.Launching,
       shouldPersist: false,
-      // @ts-ignore
+      // @ts-expect-error -- test mock: empty object stands in for the xterm Terminal instance
       xterm: {},
     };
     mockTerminals.set('t1', terminal);

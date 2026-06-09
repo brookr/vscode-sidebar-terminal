@@ -111,7 +111,7 @@ describe('SplitManager', () => {
       manager.updateSplitDirection('horizontal', 'panel');
 
       expect(manager.getCurrentPanelLocation()).toBe('panel');
-      // @ts-ignore - access private
+      // Access private member via index notation (allowed by TS without suppression)
       expect(manager['splitDirection']).toBe('horizontal');
     });
 

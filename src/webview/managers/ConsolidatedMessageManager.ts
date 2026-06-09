@@ -174,37 +174,7 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     // Session Messages
-    registry.set('sessionRestore', async (msg, coord) =>
-      this.sessionController.handleSessionRestoreMessage(msg, coord)
-    );
-    registry.set('sessionRestoreStarted', (msg) =>
-      this.sessionController.handleSessionRestoreStartedMessage(msg)
-    );
-    registry.set('sessionRestoreProgress', (msg) =>
-      this.sessionController.handleSessionRestoreProgressMessage(msg)
-    );
-    registry.set('sessionRestoreCompleted', (msg, coord) => {
-      this.sessionController.handleSessionRestoreCompletedMessage(msg);
-      this.scheduleSplitResizerRecovery(coord, 'sessionRestoreCompleted');
-    });
-    registry.set('sessionRestoreError', (msg) =>
-      this.sessionController.handleSessionRestoreErrorMessage(msg)
-    );
-    registry.set('sessionSaved', (msg) => this.sessionController.handleSessionSavedMessage(msg));
-    registry.set('sessionSaveError', (msg) =>
-      this.sessionController.handleSessionSaveErrorMessage(msg)
-    );
-    registry.set('sessionCleared', () => this.sessionController.handleSessionClearedMessage());
-    registry.set('sessionRestored', (msg, coord) => {
-      this.sessionController.handleSessionRestoredMessage(msg);
-      this.scheduleSplitResizerRecovery(coord, 'sessionRestored');
-    });
-    registry.set('sessionRestoreSkipped', (msg) =>
-      this.sessionController.handleSessionRestoreSkippedMessage(msg)
-    );
-    registry.set('terminalRestoreError', (msg) =>
-      this.sessionController.handleTerminalRestoreErrorMessage(msg)
-    );
+    this.registerSessionHandlers(registry);
 
     // Scrollback Messages
     const scrollbackCommands = [
@@ -262,6 +232,43 @@ export class ConsolidatedMessageManager implements IMessageManager {
     );
 
     return registry;
+  }
+
+  /**
+   * Register session lifecycle message handlers into the registry.
+   */
+  private registerSessionHandlers(registry: Map<string, MessageHandlerFn>): void {
+    registry.set('sessionRestore', async (msg, coord) =>
+      this.sessionController.handleSessionRestoreMessage(msg, coord)
+    );
+    registry.set('sessionRestoreStarted', (msg) =>
+      this.sessionController.handleSessionRestoreStartedMessage(msg)
+    );
+    registry.set('sessionRestoreProgress', (msg) =>
+      this.sessionController.handleSessionRestoreProgressMessage(msg)
+    );
+    registry.set('sessionRestoreCompleted', (msg, coord) => {
+      this.sessionController.handleSessionRestoreCompletedMessage(msg);
+      this.scheduleSplitResizerRecovery(coord, 'sessionRestoreCompleted');
+    });
+    registry.set('sessionRestoreError', (msg) =>
+      this.sessionController.handleSessionRestoreErrorMessage(msg)
+    );
+    registry.set('sessionSaved', (msg) => this.sessionController.handleSessionSavedMessage(msg));
+    registry.set('sessionSaveError', (msg) =>
+      this.sessionController.handleSessionSaveErrorMessage(msg)
+    );
+    registry.set('sessionCleared', () => this.sessionController.handleSessionClearedMessage());
+    registry.set('sessionRestored', (msg, coord) => {
+      this.sessionController.handleSessionRestoredMessage(msg);
+      this.scheduleSplitResizerRecovery(coord, 'sessionRestored');
+    });
+    registry.set('sessionRestoreSkipped', (msg) =>
+      this.sessionController.handleSessionRestoreSkippedMessage(msg)
+    );
+    registry.set('terminalRestoreError', (msg) =>
+      this.sessionController.handleTerminalRestoreErrorMessage(msg)
+    );
   }
 
   private scheduleSplitResizerRecovery(coordinator: IManagerCoordinator, trigger: string): void {

@@ -102,6 +102,7 @@ export class SimpleWebViewBridge {
     this._messageListener?.dispose();
 
     // Setup message listener
+    // eslint-disable-next-line no-restricted-syntax -- subscription stored in this._messageListener and disposed in clearView()/dispose()
     this._messageListener = view.webview.onDidReceiveMessage((message: WebViewMessage) => {
       this.handleMessage(message);
     });
@@ -142,13 +143,55 @@ export class SimpleWebViewBridge {
 
     log(`[SimpleWebViewBridge] Received: ${message.command}`);
 
-    switch (message.command) {
-      case 'webviewReady':
-        this.handleWebViewReady();
-        break;
+    this.dispatchMessage(message);
+  }
 
+  /**
+   * Dispatch a validated WebView message to the matching callback
+   */
+  private dispatchMessage(message: WebViewMessage): void {
+    if (message.command === 'webviewReady') {
+      this.handleWebViewReady();
+      return;
+    }
+
+    this.dispatchToCallbacks(message);
+  }
+
+  /** Commands routed to the registered SimpleWebViewCallbacks. */
+  private static readonly CALLBACK_COMMANDS: ReadonlySet<string> = new Set([
+    'terminalReady',
+    'terminalCreationFailed',
+    'input',
+    'resize',
+    'deleteTerminal',
+    'terminalFocused',
+    'terminalBlurred',
+    'titleChange',
+  ]);
+
+  /**
+   * Dispatch callback-driven messages to the registered callbacks.
+   * Mirrors the previous optional-chaining behavior: when no callbacks are
+   * registered the message is silently ignored.
+   */
+  private dispatchToCallbacks(message: Exclude<WebViewMessage, { command: 'webviewReady' }>): void {
+    // Unknown commands are always logged, mirroring the previous default-case behavior.
+    if (!SimpleWebViewBridge.CALLBACK_COMMANDS.has(message.command)) {
+      log(`[SimpleWebViewBridge] Unknown command: ${(message as { command?: string }).command}`);
+      return;
+    }
+
+    // Callback-driven commands are silently ignored when no callbacks are registered,
+    // matching the previous optional-chaining behavior.
+    const callbacks = this._callbacks;
+    if (!callbacks) {
+      return;
+    }
+
+    switch (message.command) {
       case 'terminalReady':
-        this._callbacks?.onTerminalReady({
+        callbacks.onTerminalReady({
           terminalId: message.terminalId,
           cols: message.cols,
           rows: message.rows,
@@ -156,35 +199,32 @@ export class SimpleWebViewBridge {
         break;
 
       case 'terminalCreationFailed':
-        this._callbacks?.onTerminalCreationFailed(message.terminalId, message.error);
+        callbacks.onTerminalCreationFailed(message.terminalId, message.error);
         break;
 
       case 'input':
-        this._callbacks?.onInput(message.terminalId, message.data);
+        callbacks.onInput(message.terminalId, message.data);
         break;
 
       case 'resize':
-        this._callbacks?.onResize(message.terminalId, message.cols, message.rows);
+        callbacks.onResize(message.terminalId, message.cols, message.rows);
         break;
 
       case 'deleteTerminal':
-        this._callbacks?.onDeleteRequest(message.terminalId, message.source);
+        callbacks.onDeleteRequest(message.terminalId, message.source);
         break;
 
       case 'terminalFocused':
-        this._callbacks?.onTerminalFocused(message.terminalId);
+        callbacks.onTerminalFocused(message.terminalId);
         break;
 
       case 'terminalBlurred':
-        this._callbacks?.onTerminalBlurred(message.terminalId);
+        callbacks.onTerminalBlurred(message.terminalId);
         break;
 
       case 'titleChange':
-        this._callbacks?.onTitleChange?.(message.terminalId, message.title);
+        callbacks.onTitleChange?.(message.terminalId, message.title);
         break;
-
-      default:
-        log(`[SimpleWebViewBridge] Unknown command: ${(message as any).command}`);
     }
   }
 
@@ -333,7 +373,7 @@ export class SimpleWebViewBridge {
       return;
     }
 
-    if (!this._isWebViewReady && (message as any).command !== 'extensionReady') {
+    if (!this._isWebViewReady && (message as { command?: string }).command !== 'extensionReady') {
       log('[SimpleWebViewBridge] WebView not ready, queueing message');
       this.queueMessage(message);
       return;
@@ -350,7 +390,7 @@ export class SimpleWebViewBridge {
 
     try {
       await this._view.webview.postMessage(message);
-      log(`[SimpleWebViewBridge] Sent: ${(message as any).command}`);
+      log(`[SimpleWebViewBridge] Sent: ${(message as { command?: string }).command}`);
     } catch (error) {
       // Handle disposed WebView gracefully
       if (error instanceof Error && error.message.includes('disposed')) {

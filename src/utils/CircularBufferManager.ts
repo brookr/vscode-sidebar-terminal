@@ -247,6 +247,7 @@ export class CircularBufferManager {
       return; // Already running
     }
 
+    // eslint-disable-next-line no-restricted-syntax -- timer stored in this.globalTimer and cleared via _stopGlobalTimer() in dispose()
     this.globalTimer = setInterval(() => {
       this._flushAllBuffers();
     }, this.options.flushInterval);

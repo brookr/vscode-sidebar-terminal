@@ -92,7 +92,7 @@ import { WebViewPersistenceService } from '../services/WebViewPersistenceService
 import { WebViewApiManager } from './WebViewApiManager';
 import { TerminalLifecycleCoordinator } from './TerminalLifecycleCoordinator';
 import { TerminalTabManager } from './TerminalTabManager';
-import { CliAgentStateManager } from './CliAgentStateManager';
+import { CliAgentStateManager, CliAgentState } from './CliAgentStateManager';
 import { EventHandlerManager } from './EventHandlerManager';
 import { ShellIntegrationManager } from './ShellIntegrationManager';
 import { FindInTerminalManager } from './FindInTerminalManager';
@@ -315,7 +315,8 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       setAgentConnected: (id, agentType, terminalName) =>
         this.cliAgentStateManager.setAgentConnected(id, agentType, terminalName),
       setAgentDisconnected: (id) => this.cliAgentStateManager.setAgentDisconnected(id),
-      setAgentState: (id, state) => this.cliAgentStateManager.setAgentState(id, state as any),
+      setAgentState: (id, state) =>
+        this.cliAgentStateManager.setAgentState(id, state as Partial<CliAgentState>),
       removeTerminalState: (id) => this.cliAgentStateManager.removeTerminalState(id),
       detectAgentActivity: (output, id) =>
         this.cliAgentStateManager.detectAgentActivity(output, id),
@@ -328,6 +329,34 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       disposeStateManager: () => this.cliAgentStateManager.dispose(),
     });
 
+    this.initializeTerminalOperations();
+
+    // DebugCoordinator
+    this.debugCoordinator = new DebugCoordinator({
+      debugPanelManager: this.debugPanelManager,
+      getSystemStatus: () => this.getSystemStatus(),
+      requestLatestState: () => this.requestLatestState(),
+      getTerminalStats: () => this.terminalLifecycleManager.getTerminalStats(),
+      getAgentStats: () => this.cliAgentCoordinator.getAgentStats(),
+      getEventStats: () => this.eventHandlerManager.getEventStats(),
+      getApiDiagnostics: () => this.webViewApiManager.getDiagnostics(),
+      showWarning: (msg) => this.notificationManager?.showWarning(msg),
+      notificationManager: this.notificationManager,
+    });
+
+    this.initializeSettingsCoordinator();
+
+    this.initializeTerminalStateCoordinator();
+
+    this.initializeLifecycleCoordinator();
+
+    log('✅ Coordinators initialized');
+  }
+
+  /**
+   * Initialize the TerminalOperationsCoordinator.
+   */
+  private initializeTerminalOperations(): void {
     // TerminalOperationsCoordinator
     this.terminalOperations = new TerminalOperationsCoordinator({
       getActiveTerminalId: () => this.getActiveTerminalId(),
@@ -361,20 +390,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       saveSession: () => this.webViewPersistenceService?.saveSession() ?? Promise.resolve(false),
       removeCliAgentState: (id) => this.cliAgentCoordinator.removeTerminalState(id),
     });
+  }
 
-    // DebugCoordinator
-    this.debugCoordinator = new DebugCoordinator({
-      debugPanelManager: this.debugPanelManager,
-      getSystemStatus: () => this.getSystemStatus(),
-      requestLatestState: () => this.requestLatestState(),
-      getTerminalStats: () => this.terminalLifecycleManager.getTerminalStats(),
-      getAgentStats: () => this.cliAgentCoordinator.getAgentStats(),
-      getEventStats: () => this.eventHandlerManager.getEventStats(),
-      getApiDiagnostics: () => this.webViewApiManager.getDiagnostics(),
-      showWarning: (msg) => this.notificationManager?.showWarning(msg),
-      notificationManager: this.notificationManager,
-    });
-
+  /**
+   * Initialize the SettingsCoordinator.
+   */
+  private initializeSettingsCoordinator(): void {
     // SettingsCoordinator
     this.settingsCoordinator = new SettingsCoordinator({
       getCurrentSettings: () => this.currentSettings,
@@ -397,7 +418,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.uiManager.updateTerminalBorders(activeId, containers),
       updateSplitTerminalBorders: (activeId) => this.uiManager.updateSplitTerminalBorders(activeId),
       applyAllVisualSettings: (terminal, settings) =>
-        this.uiManager.applyAllVisualSettings(terminal as any, settings),
+        this.uiManager.applyAllVisualSettings(terminal as Terminal, settings),
       fontSettingsUpdateSettings: (fontSettings, terminals) =>
         this.fontSettingsService.updateSettings(fontSettings, terminals),
       fontSettingsGetCurrentSettings: () => this.fontSettingsService.getCurrentSettings(),
@@ -413,7 +434,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       settingsPanelShow: (settings) => this.settingsPanel.show(settings),
       getVersionInfo: () => this.versionInfo,
     });
+  }
 
+  /**
+   * Initialize the TerminalStateCoordinator.
+   */
+  private initializeTerminalStateCoordinator(): void {
     // TerminalStateCoordinator
     this.terminalStateCoordinator = new TerminalStateCoordinator({
       getCurrentTerminalState: () => this.currentTerminalState,
@@ -441,7 +467,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         this.ensureSplitResizersOnInitialDisplay(state, isInitial),
       postMessageToExtension: (msg) => this.postMessageToExtension(msg),
     });
+  }
 
+  /**
+   * Initialize the LightweightTerminalLifecycleCoordinator.
+   */
+  private initializeLifecycleCoordinator(): void {
     this.lightweightTerminalLifecycleCoordinator = new LightweightTerminalLifecycleCoordinator({
       terminalOperations: this.terminalOperations,
       terminalLifecycleManager: this.terminalLifecycleManager,
@@ -469,8 +500,6 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       showTerminalLimitMessage: (current, max) => this.showTerminalLimitMessage(current, max),
       postMessageToExtension: (message) => this.postMessageToExtension(message),
     });
-
-    log('✅ Coordinators initialized');
   }
 
   /**
@@ -823,24 +852,12 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // 🎨 Use SerializeAddon first (preserves ANSI color codes)
       if (terminalInstance.serializeAddon) {
-        log('✅ [EXTRACT-DEBUG] Using SerializeAddon for color-preserving scrollback extraction');
-        try {
-          const serialized = terminalInstance.serializeAddon.serialize({ scrollback: maxLines });
-          const lines = serialized.split('\n');
-
-          // Trim trailing empty lines
-          while (lines.length > 0 && !lines[lines.length - 1]?.trim()) {
-            lines.pop();
-          }
-
-          log(`📦 [EXTRACT-DEBUG] SerializeAddon extracted ${lines.length} lines with ANSI colors`);
-          log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
-          return lines;
-        } catch (serializeError) {
-          console.warn(
-            '⚠️ [EXTRACT-DEBUG] SerializeAddon extraction failed, falling back to buffer:',
-            serializeError
-          );
+        const serializedLines = this.extractViaSerializeAddon(
+          terminalInstance.serializeAddon,
+          maxLines
+        );
+        if (serializedLines) {
+          return serializedLines;
         }
       } else {
         log('⚠️ [EXTRACT-DEBUG] SerializeAddon not available - colors will be lost');
@@ -848,26 +865,9 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
       // Fallback: Use buffer method (colors will be lost)
       if (terminal.buffer && terminal.buffer.normal) {
-        log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction (plain text)');
-        try {
-          const buffer = terminal.buffer.normal;
-          const lines: string[] = [];
-
-          log(`🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`);
-
-          const startIndex = Math.max(0, buffer.length - maxLines);
-          for (let i = startIndex; i < buffer.length; i++) {
-            const line = buffer.getLine(i);
-            if (line) {
-              lines.push(line.translateToString());
-            }
-          }
-
-          log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines (plain text)`);
-          log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
-          return lines;
-        } catch (bufferError) {
-          console.warn('⚠️ [EXTRACT-DEBUG] Buffer extraction failed:', bufferError);
+        const bufferLines = this.extractViaBuffer(terminal.buffer.normal, maxLines);
+        if (bufferLines) {
+          return bufferLines;
         }
       }
 
@@ -881,6 +881,67 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
         error
       );
       return [];
+    }
+  }
+
+  /**
+   * Extract scrollback using the SerializeAddon (preserves ANSI colors).
+   * Returns null if extraction fails so the caller can fall back to the buffer method.
+   */
+  private extractViaSerializeAddon(
+    serializeAddon: NonNullable<TerminalInstance['serializeAddon']>,
+    maxLines: number
+  ): string[] | null {
+    log('✅ [EXTRACT-DEBUG] Using SerializeAddon for color-preserving scrollback extraction');
+    try {
+      const serialized = serializeAddon.serialize({ scrollback: maxLines });
+      const lines = serialized.split('\n');
+
+      // Trim trailing empty lines
+      while (lines.length > 0 && !lines[lines.length - 1]?.trim()) {
+        lines.pop();
+      }
+
+      log(`📦 [EXTRACT-DEBUG] SerializeAddon extracted ${lines.length} lines with ANSI colors`);
+      log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+      return lines;
+    } catch (serializeError) {
+      console.warn(
+        '⚠️ [EXTRACT-DEBUG] SerializeAddon extraction failed, falling back to buffer:',
+        serializeError
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Extract scrollback from the terminal buffer (plain text, colors lost).
+   * Returns null if extraction fails.
+   */
+  private extractViaBuffer(
+    buffer: NonNullable<Terminal['buffer']['normal']>,
+    maxLines: number
+  ): string[] | null {
+    log('📄 [EXTRACT-DEBUG] Using buffer method for scrollback extraction (plain text)');
+    try {
+      const lines: string[] = [];
+
+      log(`🔍 [EXTRACT-DEBUG] Buffer length: ${buffer.length}, requesting max: ${maxLines}`);
+
+      const startIndex = Math.max(0, buffer.length - maxLines);
+      for (let i = startIndex; i < buffer.length; i++) {
+        const line = buffer.getLine(i);
+        if (line) {
+          lines.push(line.translateToString());
+        }
+      }
+
+      log(`📦 [EXTRACT-DEBUG] Buffer method extracted ${lines.length} lines (plain text)`);
+      log('📄 [EXTRACT-DEBUG] First few lines:', lines.slice(0, 3));
+      return lines;
+    } catch (bufferError) {
+      console.warn('⚠️ [EXTRACT-DEBUG] Buffer extraction failed:', bufferError);
+      return null;
     }
   }
 
@@ -1064,8 +1125,32 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       return;
     }
 
+    const metrics = this.gatherSplitLayoutMetrics(state.terminals.length);
+
+    if (this.isSplitLayoutValid(metrics)) {
+      return;
+    }
+
+    log(
+      `🔧 [SPLIT] Layout mismatch on display - refreshing split layout (state=${metrics.stateTerminalCount}, wrappers=${metrics.wrapperCount}, resizers=${metrics.resizerCount}, expectedResizers=${metrics.expectedResizerCount}, mode=${currentMode}, initial=${isInitialStateSync})`
+    );
+    displayModeManager.showAllTerminalsSplit?.();
+    this.updateSplitResizers();
+  }
+
+  /**
+   * Gather DOM/state metrics used to determine whether the split layout is valid.
+   */
+  private gatherSplitLayoutMetrics(stateTerminalCount: number): {
+    stateTerminalCount: number;
+    domWrapperCount: number;
+    isGridLayout: boolean;
+    resizerCount: number;
+    gridResizerCount: number;
+    wrapperCount: number;
+    expectedResizerCount: number;
+  } {
     const terminalsWrapper = document.getElementById('terminals-wrapper');
-    const stateTerminalCount = state.terminals.length;
     const domWrapperCount = terminalsWrapper
       ? terminalsWrapper.querySelectorAll('[data-terminal-wrapper-id]').length
       : 0;
@@ -1077,28 +1162,40 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
       ? terminalsWrapper.querySelectorAll('.grid-row-resizer').length
       : 0;
     const wrapperCount = domWrapperCount > 0 ? domWrapperCount : stateTerminalCount;
-
     const expectedResizerCount = isGridLayout ? 0 : wrapperCount - 1;
-    let layoutIsValid: boolean;
-    if (isGridLayout) {
+
+    return {
+      stateTerminalCount,
+      domWrapperCount,
+      isGridLayout,
+      resizerCount,
+      gridResizerCount,
+      wrapperCount,
+      expectedResizerCount,
+    };
+  }
+
+  /**
+   * Determine whether the current split layout matches the expected metrics.
+   */
+  private isSplitLayoutValid(metrics: {
+    stateTerminalCount: number;
+    domWrapperCount: number;
+    isGridLayout: boolean;
+    resizerCount: number;
+    gridResizerCount: number;
+    expectedResizerCount: number;
+  }): boolean {
+    const wrapperLayoutValid =
+      metrics.domWrapperCount === 0 || metrics.domWrapperCount === metrics.stateTerminalCount;
+
+    if (metrics.isGridLayout) {
       // In grid mode: wrappers should match terminal count, one grid-row-resizer
-      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
-      layoutIsValid = wrapperLayoutValid && gridResizerCount === 1;
-    } else {
-      const resizerLayoutValid = resizerCount === expectedResizerCount;
-      const wrapperLayoutValid = domWrapperCount === 0 || domWrapperCount === stateTerminalCount;
-      layoutIsValid = resizerLayoutValid && wrapperLayoutValid;
+      return wrapperLayoutValid && metrics.gridResizerCount === 1;
     }
 
-    if (layoutIsValid) {
-      return;
-    }
-
-    log(
-      `🔧 [SPLIT] Layout mismatch on display - refreshing split layout (state=${stateTerminalCount}, wrappers=${wrapperCount}, resizers=${resizerCount}, expectedResizers=${expectedResizerCount}, mode=${currentMode}, initial=${isInitialStateSync})`
-    );
-    displayModeManager.showAllTerminalsSplit?.();
-    this.updateSplitResizers();
+    const resizerLayoutValid = metrics.resizerCount === metrics.expectedResizerCount;
+    return resizerLayoutValid && wrapperLayoutValid;
   }
 
   /**
@@ -1311,7 +1408,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
 
   // Statistics and diagnostics
 
-  public getManagerStats() {
+  public getManagerStats(): ReturnType<DebugCoordinator['getManagerStats']> {
     return this.debugCoordinator.getManagerStats();
   }
 
@@ -1381,7 +1478,7 @@ export class LightweightTerminalWebviewManager implements IManagerCoordinator {
     return this.terminalAccessorCoordinator.getTerminal();
   }
 
-  public get fitAddon() {
+  public get fitAddon(): ReturnType<TerminalAccessorCoordinator['getFitAddon']> {
     return this.terminalAccessorCoordinator.getFitAddon();
   }
 

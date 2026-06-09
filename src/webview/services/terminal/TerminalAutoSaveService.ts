@@ -306,46 +306,7 @@ export class TerminalAutoSaveService {
           return;
         }
 
-        try {
-          const serialized = serializeAddon.serialize({ scrollback: 1000 });
-          const lines = serialized.split('\n');
-
-          const windowWithApi = window as Window & {
-            vscodeApi?: {
-              postMessage: (message: unknown) => void;
-            };
-          };
-
-          const message = {
-            command: 'pushScrollbackData',
-            terminalId,
-            scrollbackData: lines,
-            timestamp: Date.now(),
-          };
-
-          if (windowWithApi.vscodeApi) {
-            windowWithApi.vscodeApi.postMessage(message);
-            terminalLogger.info(
-              `[AUTO-SAVE] Pushed scrollback via vscodeApi for terminal ${terminalId}: ${lines.length} lines`
-            );
-          } else {
-            if (this.coordinator && typeof this.coordinator.postMessageToExtension === 'function') {
-              this.coordinator.postMessageToExtension(message);
-              terminalLogger.info(
-                `[AUTO-SAVE] Pushed scrollback via MessageManager for terminal ${terminalId}: ${lines.length} lines`
-              );
-            } else {
-              terminalLogger.error(
-                `[AUTO-SAVE] No message transport available for terminal ${terminalId}`
-              );
-            }
-          }
-        } catch (error) {
-          terminalLogger.warn(
-            `[AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`,
-            error
-          );
-        }
+        this.serializeAndPushScrollback(terminalId, serializeAddon, false);
       }, 3000);
     };
 
@@ -371,41 +332,7 @@ export class TerminalAutoSaveService {
         return;
       }
 
-      try {
-        const serialized = serializeAddon.serialize({ scrollback: 1000 });
-        const lines = serialized.split('\n');
-
-        const windowWithApi = window as Window & {
-          vscodeApi?: {
-            postMessage: (message: unknown) => void;
-          };
-        };
-
-        const message = {
-          command: 'pushScrollbackData',
-          terminalId,
-          scrollbackData: lines,
-          timestamp: Date.now(),
-          periodic: true, // Mark as periodic save for debugging
-        };
-
-        if (windowWithApi.vscodeApi) {
-          windowWithApi.vscodeApi.postMessage(message);
-          terminalLogger.debug(
-            `[AUTO-SAVE] Periodic save for terminal ${terminalId}: ${lines.length} lines`
-          );
-        } else if (
-          this.coordinator &&
-          typeof this.coordinator.postMessageToExtension === 'function'
-        ) {
-          this.coordinator.postMessageToExtension(message);
-          terminalLogger.debug(
-            `[AUTO-SAVE] Periodic save via coordinator for terminal ${terminalId}: ${lines.length} lines`
-          );
-        }
-      } catch (error) {
-        terminalLogger.warn(`[AUTO-SAVE] Periodic save failed for terminal ${terminalId}:`, error);
-      }
+      this.serializeAndPushScrollback(terminalId, serializeAddon, true);
     }, TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL);
 
     // Track the timer for cleanup
@@ -418,5 +345,78 @@ export class TerminalAutoSaveService {
     terminalLogger.info(
       `[AUTO-SAVE] Scrollback auto-save enabled for terminal: ${terminalId} (periodic: ${TerminalAutoSaveService.PERIODIC_SAVE_INTERVAL}ms)`
     );
+  }
+
+  /**
+   * Serialize the terminal scrollback and push it to the extension over the
+   * available transport (vscodeApi or coordinator).
+   *
+   * @param periodic When true, the message is tagged as a periodic save and
+   *   logged at debug level; otherwise it is logged at info level and a missing
+   *   transport is treated as an error.
+   */
+  private serializeAndPushScrollback(
+    terminalId: string,
+    serializeAddon: SerializeAddon,
+    periodic: boolean
+  ): void {
+    try {
+      const serialized = serializeAddon.serialize({ scrollback: 1000 });
+      const lines = serialized.split('\n');
+
+      const windowWithApi = window as Window & {
+        vscodeApi?: {
+          postMessage: (message: unknown) => void;
+        };
+      };
+
+      const message = {
+        command: 'pushScrollbackData',
+        terminalId,
+        scrollbackData: lines,
+        timestamp: Date.now(),
+        ...(periodic ? { periodic: true } : {}), // Mark as periodic save for debugging
+      };
+
+      if (windowWithApi.vscodeApi) {
+        windowWithApi.vscodeApi.postMessage(message);
+        if (periodic) {
+          terminalLogger.debug(
+            `[AUTO-SAVE] Periodic save for terminal ${terminalId}: ${lines.length} lines`
+          );
+        } else {
+          terminalLogger.info(
+            `[AUTO-SAVE] Pushed scrollback via vscodeApi for terminal ${terminalId}: ${lines.length} lines`
+          );
+        }
+      } else if (
+        this.coordinator &&
+        typeof this.coordinator.postMessageToExtension === 'function'
+      ) {
+        this.coordinator.postMessageToExtension(message);
+        if (periodic) {
+          terminalLogger.debug(
+            `[AUTO-SAVE] Periodic save via coordinator for terminal ${terminalId}: ${lines.length} lines`
+          );
+        } else {
+          terminalLogger.info(
+            `[AUTO-SAVE] Pushed scrollback via MessageManager for terminal ${terminalId}: ${lines.length} lines`
+          );
+        }
+      } else if (!periodic) {
+        terminalLogger.error(
+          `[AUTO-SAVE] No message transport available for terminal ${terminalId}`
+        );
+      }
+    } catch (error) {
+      if (periodic) {
+        terminalLogger.warn(`[AUTO-SAVE] Periodic save failed for terminal ${terminalId}:`, error);
+      } else {
+        terminalLogger.warn(
+          `[AUTO-SAVE] Failed to push scrollback for terminal ${terminalId}:`,
+          error
+        );
+      }
+    }
   }
 }

@@ -67,7 +67,7 @@ interface InputState {
 /**
  * State change listener
  */
-type StateChangeListener<T = any> = (newState: T, previousState: T, stateKey: string) => void;
+type StateChangeListener<T = unknown> = (newState: T, previousState: T, stateKey: string) => void;
 
 /**
  * State validation result
@@ -77,6 +77,13 @@ interface StateValidationResult {
   errors: string[];
   warnings: string[];
 }
+
+/**
+ * Validator for a single state section. The section's concrete value is passed
+ * in, but the registry stores it type-erased, so each validator narrows the
+ * incoming value to its own section type before reading it.
+ */
+type StateSectionValidator = (value: InputState[keyof InputState]) => StateValidationResult;
 
 /**
  * Centralized input state manager
@@ -92,15 +99,16 @@ export class InputStateManager {
   // State change listeners
   private listeners = new Map<string, Set<StateChangeListener>>();
 
-  // State validation rules
-  private validationRules = new Map<string, (value: any) => StateValidationResult>();
+  // State validation rules. Each section's validator receives that section's
+  // value; the map erases the per-section type, so validators narrow internally.
+  private validationRules = new Map<string, StateSectionValidator>();
 
   // State change history for debugging
   private stateHistory: Array<{
     timestamp: number;
     stateKey: string;
-    previousValue: any;
-    newValue: any;
+    previousValue: unknown;
+    newValue: unknown;
   }> = [];
 
   // Logger function
@@ -164,7 +172,8 @@ export class InputStateManager {
    */
   private setupValidationRules(): void {
     // IME state validation
-    this.validationRules.set('ime', (state: IMECompositionState): StateValidationResult => {
+    this.validationRules.set('ime', (value): StateValidationResult => {
+      const state = value as IMECompositionState;
       const errors: string[] = [];
       const warnings: string[] = [];
 
@@ -188,7 +197,8 @@ export class InputStateManager {
     });
 
     // Alt+Click state validation
-    this.validationRules.set('altClick', (state: AltClickState): StateValidationResult => {
+    this.validationRules.set('altClick', (value): StateValidationResult => {
+      const state = value as AltClickState;
       const errors: string[] = [];
       const warnings: string[] = [];
 
@@ -208,7 +218,8 @@ export class InputStateManager {
     });
 
     // Keyboard state validation
-    this.validationRules.set('keyboard', (state: KeyboardState): StateValidationResult => {
+    this.validationRules.set('keyboard', (value): StateValidationResult => {
+      const state = value as KeyboardState;
       const errors: string[] = [];
       const warnings: string[] = [];
 
@@ -228,7 +239,8 @@ export class InputStateManager {
     });
 
     // Agent state validation
-    this.validationRules.set('agent', (state: AgentInteractionState): StateValidationResult => {
+    this.validationRules.set('agent', (value): StateValidationResult => {
+      const state = value as AgentInteractionState;
       const errors: string[] = [];
       const warnings: string[] = [];
 
@@ -346,7 +358,7 @@ export class InputStateManager {
   /**
    * Record state change in history
    */
-  private recordStateChange(stateKey: string, previousValue: any, newValue: any): void {
+  private recordStateChange(stateKey: string, previousValue: unknown, newValue: unknown): void {
     this.stateHistory.push({
       timestamp: Date.now(),
       stateKey,
@@ -363,7 +375,7 @@ export class InputStateManager {
   /**
    * Notify state change listeners
    */
-  private notifyStateChange(stateKey: string, newValue: any, previousValue: any): void {
+  private notifyStateChange(stateKey: string, newValue: unknown, previousValue: unknown): void {
     const sectionListeners = this.listeners.get(stateKey);
     if (sectionListeners) {
       for (const listener of sectionListeners) {
@@ -399,7 +411,9 @@ export class InputStateManager {
       this.listeners.set(section, new Set());
     }
 
-    this.listeners.get(section)!.add(listener);
+    // The registry stores type-erased listeners; notifyStateChange always invokes
+    // each listener with its own section's value, so this cast is sound.
+    this.listeners.get(section)!.add(listener as StateChangeListener);
     this.logger(`Added state listener for ${section}`);
   }
 
@@ -412,7 +426,7 @@ export class InputStateManager {
   ): void {
     const sectionListeners = this.listeners.get(section);
     if (sectionListeners) {
-      sectionListeners.delete(listener);
+      sectionListeners.delete(listener as StateChangeListener);
       if (sectionListeners.size === 0) {
         this.listeners.delete(section);
       }
@@ -464,7 +478,7 @@ export class InputStateManager {
   /**
    * Get state summary for debugging
    */
-  public getStateSummary(): Record<string, any> {
+  public getStateSummary(): Record<string, unknown> {
     return {
       ime: {
         active: this.state.ime.isActive,

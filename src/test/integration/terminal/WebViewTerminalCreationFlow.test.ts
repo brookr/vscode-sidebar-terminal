@@ -84,6 +84,7 @@ class MockSecondaryTerminalProvider {
   }
 
   private setupMessageHandling(): void {
+    // eslint-disable-next-line no-restricted-syntax -- subscription is stored in this.messageDisposable and disposed in dispose()
     this.messageDisposable = this.webview.onDidReceiveMessage((message) => {
       this.handleWebViewMessage(message);
     });

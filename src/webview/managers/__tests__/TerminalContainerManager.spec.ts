@@ -5,6 +5,7 @@
 import { TerminalContainerManager } from '../TerminalContainerManager';
 import { IManagerCoordinator } from '../../interfaces/ManagerInterfaces';
 
+// eslint-disable-next-line max-lines-per-function -- top-level test suite; splitting would fragment cohesive describe blocks
 describe('TerminalContainerManager', () => {
   let containerManager: TerminalContainerManager;
   let mockCoordinator: Partial<IManagerCoordinator>;
@@ -29,6 +30,7 @@ describe('TerminalContainerManager', () => {
 
   describe('initialization', () => {
     it('should initialize successfully', () => {
+      // eslint-disable-next-line max-nested-callbacks -- idiomatic expect(() => ...).not.toThrow() assertion
       expect(() => containerManager.initialize()).not.toThrow();
     });
 
@@ -115,6 +117,7 @@ describe('TerminalContainerManager', () => {
     });
 
     it('should handle non-existent container gracefully', () => {
+      // eslint-disable-next-line max-nested-callbacks -- idiomatic expect(() => ...).not.toThrow() assertion
       expect(() => {
         containerManager.setContainerVisibility('non-existent', true);
       }).not.toThrow();

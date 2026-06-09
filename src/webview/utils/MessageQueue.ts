@@ -120,34 +120,16 @@ export class MessageQueue implements Disposable {
 
       // Continue processing as long as there are messages in either queue
       while (this.highPriorityQueue.length > 0 || this.normalQueue.length > 0) {
-        let message: QueuedMessage;
-
         // Always check high priority first in every iteration
-        if (this.highPriorityQueue.length > 0) {
-          message = this.highPriorityQueue.shift()!;
-        } else {
-          message = this.normalQueue.shift()!;
-        }
+        const message =
+          this.highPriorityQueue.length > 0
+            ? this.highPriorityQueue.shift()!
+            : this.normalQueue.shift()!;
 
         const success = await this.sendMessage(message);
 
         if (!success) {
-          if (message.retryCount < message.maxRetries) {
-            message.retryCount++;
-            // Re-queue at the front of the appropriate queue
-            if (message.priority === 'high') {
-              this.highPriorityQueue.unshift(message);
-            } else {
-              this.normalQueue.unshift(message);
-            }
-            messageLogger.warn(
-              `Retrying ${message.priority} priority message ${message.id} (attempt ${message.retryCount})`
-            );
-          } else {
-            messageLogger.error(
-              `${message.priority} priority message ${message.id} failed after ${message.maxRetries} attempts`
-            );
-          }
+          this.handleFailedMessage(message);
           // Stop processing on failure to preserve order (or we could continue?)
           // Current logic breaks.
           break;
@@ -174,6 +156,28 @@ export class MessageQueue implements Disposable {
     } finally {
       this.isProcessing = false;
       this.queueLock = false;
+    }
+  }
+
+  /**
+   * Handle a message that failed to send: re-queue for retry or log final failure.
+   */
+  private handleFailedMessage(message: QueuedMessage): void {
+    if (message.retryCount < message.maxRetries) {
+      message.retryCount++;
+      // Re-queue at the front of the appropriate queue
+      if (message.priority === 'high') {
+        this.highPriorityQueue.unshift(message);
+      } else {
+        this.normalQueue.unshift(message);
+      }
+      messageLogger.warn(
+        `Retrying ${message.priority} priority message ${message.id} (attempt ${message.retryCount})`
+      );
+    } else {
+      messageLogger.error(
+        `${message.priority} priority message ${message.id} failed after ${message.maxRetries} attempts`
+      );
     }
   }
 

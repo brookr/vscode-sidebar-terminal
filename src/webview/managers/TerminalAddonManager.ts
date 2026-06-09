@@ -13,7 +13,7 @@
  */
 
 import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
+import { FitAddon, type ITerminalDimensions } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { SearchAddon } from '@xterm/addon-search';
 import { SerializeAddon } from '@xterm/addon-serialize';
@@ -205,7 +205,7 @@ export class TerminalAddonManager {
         addons.webglAddon.dispose();
       }
       if (addons.unicode11Addon) {
-        (addons.unicode11Addon as any).dispose?.();
+        addons.unicode11Addon.dispose();
       }
 
       // Note: FitAddon, WebLinksAddon, and SerializeAddon are disposed
@@ -230,65 +230,95 @@ export class TerminalAddonManager {
   private patchFitAddonForScrollbar(terminal: Terminal, fitAddon: FitAddon): void {
     const originalPropose = fitAddon.proposeDimensions.bind(fitAddon);
 
-    fitAddon.proposeDimensions = () => {
-      const element = terminal.element as HTMLElement | null;
-      const parent = element?.parentElement as HTMLElement | null;
-      const core = (
-        terminal as unknown as {
-          _core?: {
-            _renderService?: { dimensions?: { css: { cell: { width: number; height: number } } } };
-            viewport?: { scrollBarWidth: number };
-          };
-        }
-      )._core;
-      const dimensions = core?._renderService?.dimensions;
+    fitAddon.proposeDimensions = () =>
+      this._proposeScrollbarAwareDimensions(terminal, originalPropose);
+  }
 
-      if (!element || !parent || !dimensions) {
-        return originalPropose();
+  /**
+   * Compute terminal dimensions that account for the scrollbar width so that
+   * content is not clipped. Falls back to xterm's original `proposeDimensions`
+   * whenever the required layout information is unavailable.
+   */
+  private _proposeScrollbarAwareDimensions(
+    terminal: Terminal,
+    originalPropose: () => ITerminalDimensions | undefined
+  ): ITerminalDimensions | undefined {
+    const element = terminal.element as HTMLElement | null;
+    const parent = element?.parentElement as HTMLElement | null;
+    const core = (
+      terminal as unknown as {
+        _core?: {
+          _renderService?: { dimensions?: { css: { cell: { width: number; height: number } } } };
+          viewport?: { scrollBarWidth: number };
+        };
       }
+    )._core;
+    const dimensions = core?._renderService?.dimensions;
 
-      const cellWidth = dimensions.css.cell.width;
-      const cellHeight = dimensions.css.cell.height;
-      if (cellWidth === 0 || cellHeight === 0) {
-        return originalPropose();
-      }
+    if (!element || !parent || !dimensions) {
+      return originalPropose();
+    }
 
-      const parentStyle = window.getComputedStyle(parent);
-      const elementStyle = window.getComputedStyle(element);
-      const height = parseInt(parentStyle.getPropertyValue('height'), 10);
-      const width = Math.max(0, parseInt(parentStyle.getPropertyValue('width'), 10));
+    const cellWidth = dimensions.css.cell.width;
+    const cellHeight = dimensions.css.cell.height;
+    if (cellWidth === 0 || cellHeight === 0) {
+      return originalPropose();
+    }
 
-      if (Number.isNaN(height) || Number.isNaN(width)) {
-        return originalPropose();
-      }
+    const parentStyle = window.getComputedStyle(parent);
+    const elementStyle = window.getComputedStyle(element);
+    const height = parseInt(parentStyle.getPropertyValue('height'), 10);
+    const width = Math.max(0, parseInt(parentStyle.getPropertyValue('width'), 10));
 
-      const paddingVertical =
-        (parseInt(elementStyle.getPropertyValue('padding-top'), 10) || 0) +
-        (parseInt(elementStyle.getPropertyValue('padding-bottom'), 10) || 0);
-      const paddingHorizontal =
-        (parseInt(elementStyle.getPropertyValue('padding-left'), 10) || 0) +
-        (parseInt(elementStyle.getPropertyValue('padding-right'), 10) || 0);
-      const parentPaddingVertical =
-        (parseInt(parentStyle.getPropertyValue('padding-top'), 10) || 0) +
-        (parseInt(parentStyle.getPropertyValue('padding-bottom'), 10) || 0);
-      const parentPaddingHorizontal =
-        (parseInt(parentStyle.getPropertyValue('padding-left'), 10) || 0) +
-        (parseInt(parentStyle.getPropertyValue('padding-right'), 10) || 0);
+    if (Number.isNaN(height) || Number.isNaN(width)) {
+      return originalPropose();
+    }
 
-      const viewport = element.querySelector('.xterm-viewport') as HTMLElement | null;
-      const actualScrollbarWidth = viewport
-        ? Math.max(0, viewport.offsetWidth - viewport.clientWidth)
-        : 0;
-      const scrollbarWidth = actualScrollbarWidth || core?.viewport?.scrollBarWidth || 0;
+    const paddingVertical =
+      this._readPadding(elementStyle, 'padding-top') +
+      this._readPadding(elementStyle, 'padding-bottom');
+    const paddingHorizontal =
+      this._readPadding(elementStyle, 'padding-left') +
+      this._readPadding(elementStyle, 'padding-right');
+    const parentPaddingVertical =
+      this._readPadding(parentStyle, 'padding-top') +
+      this._readPadding(parentStyle, 'padding-bottom');
+    const parentPaddingHorizontal =
+      this._readPadding(parentStyle, 'padding-left') +
+      this._readPadding(parentStyle, 'padding-right');
 
-      const availableHeight = height - paddingVertical - parentPaddingVertical;
-      const availableWidth = width - paddingHorizontal - parentPaddingHorizontal - scrollbarWidth;
-      const safetyPaddingPx = 0; // Remove safety padding to maximize visible area
+    const scrollbarWidth = this._computeScrollbarWidth(element, core?.viewport?.scrollBarWidth);
 
-      return {
-        cols: Math.max(2, Math.floor((availableWidth - safetyPaddingPx) / cellWidth)),
-        rows: Math.max(1, Math.floor(availableHeight / cellHeight)),
-      };
+    const availableHeight = height - paddingVertical - parentPaddingVertical;
+    const availableWidth = width - paddingHorizontal - parentPaddingHorizontal - scrollbarWidth;
+    const safetyPaddingPx = 0; // Remove safety padding to maximize visible area
+
+    return {
+      cols: Math.max(2, Math.floor((availableWidth - safetyPaddingPx) / cellWidth)),
+      rows: Math.max(1, Math.floor(availableHeight / cellHeight)),
     };
+  }
+
+  /**
+   * Determine the scrollbar width, preferring the measured viewport gutter and
+   * falling back to xterm's reported scrollbar width (or 0).
+   */
+  private _computeScrollbarWidth(
+    element: HTMLElement,
+    coreScrollBarWidth: number | undefined
+  ): number {
+    const viewport = element.querySelector('.xterm-viewport') as HTMLElement | null;
+    const actualScrollbarWidth = viewport
+      ? Math.max(0, viewport.offsetWidth - viewport.clientWidth)
+      : 0;
+    return actualScrollbarWidth || coreScrollBarWidth || 0;
+  }
+
+  /**
+   * Read a single CSS padding value as a number, treating missing or
+   * non-numeric values as 0.
+   */
+  private _readPadding(style: CSSStyleDeclaration, property: string): number {
+    return parseInt(style.getPropertyValue(property), 10) || 0;
   }
 }

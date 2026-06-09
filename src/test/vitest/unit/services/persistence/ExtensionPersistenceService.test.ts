@@ -178,6 +178,7 @@ describe('ExtensionPersistenceService', () => {
 
       // Find the save call
       const saveCalls = workspaceState.update.mock.calls.filter(
+        // eslint-disable-next-line eqeqeq -- intentional null+undefined check on mock call argument
         (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
       );
       expect(saveCalls.length).toBeGreaterThanOrEqual(1);
@@ -209,6 +210,7 @@ describe('ExtensionPersistenceService', () => {
       await service.saveCurrentSession({ preferCache: true });
 
       const saveCalls = workspaceState.update.mock.calls.filter(
+        // eslint-disable-next-line eqeqeq -- intentional null+undefined check on mock call argument
         (call: unknown[]) => call[0] === 'terminal-session-unified' && call[1] != null
       );
       expect(saveCalls.length).toBeGreaterThanOrEqual(1);

@@ -16,6 +16,7 @@
  */
 
 import { expect } from 'chai';
+// eslint-disable-next-line @typescript-eslint/naming-convention -- underscore prefix marks this unused import as intentional (no-unused-vars varsIgnorePattern)
 import * as _sinon from 'sinon';
 import {
   setupTestEnvironment as _setupTestEnvironment,

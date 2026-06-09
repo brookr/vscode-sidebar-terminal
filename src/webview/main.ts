@@ -50,6 +50,69 @@ let extensionReady = false;
 let initializationAttempted = false;
 
 /**
+ * Handle Ctrl+Shift debugging keyboard shortcuts.
+ *
+ * Each shortcut calls `preventDefault()` and then performs its action only when
+ * a terminal manager is available, mirroring the original inline handler.
+ */
+function handleDebugKeydown(event: KeyboardEvent): void {
+  if (!event.ctrlKey || !event.shiftKey) {
+    return;
+  }
+
+  switch (event.key) {
+    case 'D':
+      event.preventDefault();
+      terminalManager?.toggleDebugPanel();
+      break;
+    case 'X':
+      event.preventDefault();
+      copyDiagnosticsToClipboard();
+      break;
+    case 'R':
+      event.preventDefault();
+      terminalManager?.forceSynchronization();
+      break;
+    case 'T':
+      event.preventDefault();
+      sendTestInput();
+      break;
+    default:
+      break;
+  }
+}
+
+/**
+ * Export system diagnostics to the clipboard (best-effort).
+ */
+function copyDiagnosticsToClipboard(): void {
+  if (!terminalManager) {
+    return;
+  }
+  const diagnostics = terminalManager.exportSystemDiagnostics();
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2)).catch(() => {
+      // Clipboard write may fail in some environments - non-critical
+    });
+  }
+}
+
+/**
+ * Send a test input command to the active terminal.
+ */
+function sendTestInput(): void {
+  if (!terminalManager) {
+    return;
+  }
+  terminalManager.postMessageToExtension({
+    command: 'input',
+    terminalId: terminalManager.getActiveTerminalId(),
+    data: 'echo "Test input working"\r',
+    timestamp: Date.now(),
+  });
+}
+
+/**
  * WebView初期化のメイン関数
  * 🎯 HANDSHAKE PROTOCOL: This function is now called AFTER receiving extensionReady
  */
@@ -111,45 +174,7 @@ async function initializeWebView(): Promise<void> {
     window.terminalManager = terminalManager;
 
     // Setup debugging keyboard shortcuts
-    document.addEventListener('keydown', (event) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'D') {
-        event.preventDefault();
-        if (terminalManager) {
-          terminalManager.toggleDebugPanel();
-        }
-      }
-
-      if (event.ctrlKey && event.shiftKey && event.key === 'X') {
-        event.preventDefault();
-        if (terminalManager) {
-          const diagnostics = terminalManager.exportSystemDiagnostics();
-          if (navigator.clipboard) {
-            navigator.clipboard.writeText(JSON.stringify(diagnostics, null, 2)).catch(() => {
-              // Clipboard write may fail in some environments - non-critical
-            });
-          }
-        }
-      }
-
-      if (event.ctrlKey && event.shiftKey && event.key === 'R') {
-        event.preventDefault();
-        if (terminalManager) {
-          terminalManager.forceSynchronization();
-        }
-      }
-
-      if (event.ctrlKey && event.shiftKey && event.key === 'T') {
-        event.preventDefault();
-        if (terminalManager) {
-          terminalManager.postMessageToExtension({
-            command: 'input',
-            terminalId: terminalManager.getActiveTerminalId(),
-            data: 'echo "Test input working"\r',
-            timestamp: Date.now(),
-          });
-        }
-      }
-    });
+    document.addEventListener('keydown', handleDebugKeydown);
   } catch (error) {
     error_category('Failed to initialize WebView', {
       name: error instanceof Error ? error.name : 'Unknown',
@@ -166,6 +191,7 @@ async function initializeWebView(): Promise<void> {
  * エラーハンドリングの設定
  */
 function setupErrorHandling(): void {
+  // eslint-disable-next-line no-restricted-syntax -- process-lifetime global error handler for the webview document; lives until the webview is torn down
   window.addEventListener('error', (event) => {
     error_category('Global error:', {
       message: event.message,
@@ -176,6 +202,7 @@ function setupErrorHandling(): void {
     });
   });
 
+  // eslint-disable-next-line no-restricted-syntax -- process-lifetime global rejection handler for the webview document; lives until the webview is torn down
   window.addEventListener('unhandledrejection', (event) => {
     error_category('Unhandled promise rejection:', event.reason);
     event.preventDefault();
@@ -273,7 +300,9 @@ if (document.readyState === 'loading') {
 }
 
 // Page unload event handling
+// eslint-disable-next-line no-restricted-syntax -- teardown handler that itself runs on page unload; nothing to remove it from afterwards
 window.addEventListener('beforeunload', onPageUnload);
+// eslint-disable-next-line no-restricted-syntax -- teardown handler that itself runs on page unload; nothing to remove it from afterwards
 window.addEventListener('unload', onPageUnload);
 
 // Export for debugging

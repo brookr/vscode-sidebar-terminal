@@ -103,10 +103,14 @@ export class TerminalEventCoordinator implements vscode.Disposable {
     const createdDisposable = this._terminalManager.onTerminalCreated((terminal) => {
       log('🆕 [EVENT-COORDINATOR] Terminal created:', terminal.id, terminal.name);
 
+      const consumeOverride = (
+        this._terminalManager as {
+          consumeCreationDisplayModeOverride?: (terminalId: string) => string | null;
+        }
+      ).consumeCreationDisplayModeOverride;
       const displayModeOverride =
-        'consumeCreationDisplayModeOverride' in this._terminalManager &&
-        typeof (this._terminalManager as any).consumeCreationDisplayModeOverride === 'function'
-          ? (this._terminalManager as any).consumeCreationDisplayModeOverride(terminal.id)
+        typeof consumeOverride === 'function'
+          ? consumeOverride.call(this._terminalManager, terminal.id)
           : (terminal.creationDisplayModeOverride ?? null);
 
       const message: WebviewMessage = {
@@ -245,35 +249,15 @@ export class TerminalEventCoordinator implements vscode.Disposable {
    * within the 100ms debounce window are honored, avoiding stale closure values.
    */
   private setupConfigurationChangeListeners(): void {
+    // eslint-disable-next-line no-restricted-syntax -- disposable is stored in this._disposables (DisposableStore) and released in dispose()
     const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
       // Check for general settings changes - use OR to accumulate intent
-      if (
-        event.affectsConfiguration('editor.multiCursorModifier') ||
-        event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
-        event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
-        event.affectsConfiguration('secondaryTerminal.theme') ||
-        event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
-        event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
-        event.affectsConfiguration('secondaryTerminal.activeBorderMode')
-      ) {
+      if (this._affectsGeneralSettings(event)) {
         this._pendingSettingsUpdate = true;
       }
 
       // Check for font settings changes - use OR to accumulate intent
-      if (
-        event.affectsConfiguration('terminal.integrated.fontSize') ||
-        event.affectsConfiguration('terminal.integrated.fontFamily') ||
-        event.affectsConfiguration('terminal.integrated.fontWeight') ||
-        event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
-        event.affectsConfiguration('terminal.integrated.lineHeight') ||
-        event.affectsConfiguration('terminal.integrated.letterSpacing') ||
-        event.affectsConfiguration('editor.fontSize') ||
-        event.affectsConfiguration('editor.fontFamily') ||
-        event.affectsConfiguration('secondaryTerminal.fontWeight') ||
-        event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
-        event.affectsConfiguration('secondaryTerminal.lineHeight') ||
-        event.affectsConfiguration('secondaryTerminal.letterSpacing')
-      ) {
+      if (this._affectsFontSettings(event)) {
         this._pendingFontSettingsUpdate = true;
       }
 
@@ -287,68 +271,102 @@ export class TerminalEventCoordinator implements vscode.Disposable {
 
         // Debounce: wait 100ms for config to settle before sending update
         this._configChangeDebounceTimer = setTimeout(() => {
-          // Read and reset the flags atomically
-          const shouldUpdateSettings = this._pendingSettingsUpdate;
-          const shouldUpdateFontSettings = this._pendingFontSettingsUpdate;
-          this._pendingSettingsUpdate = false;
-          this._pendingFontSettingsUpdate = false;
-
-          log(
-            '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
-            shouldUpdateSettings,
-            ', fonts:',
-            shouldUpdateFontSettings,
-            ')'
-          );
-
-          // Send updated settings to WebView
-          if (shouldUpdateSettings) {
-            const settings = this._getCurrentSettings();
-            // 🔧 FIX: Deduplicate on entire settings payload, not just theme
-            // This ensures non-theme settings (cursorBlink, altClickMovesCursor, etc.) are sent
-            const settingsKey = JSON.stringify(settings);
-
-            if (settingsKey !== this._lastSentSettingsKey) {
-              log(`📤 [EVENT-COORDINATOR] Sending settings update`);
-              this._lastSentSettingsKey = settingsKey;
-              this._sendMessage({
-                command: 'settingsResponse',
-                settings,
-              }).catch((err) => log('❌ [EVENT-COORDINATOR] Failed to send settings update:', err));
-              log('⚙️ [EVENT-COORDINATOR] Sent settings update to WebView');
-            } else {
-              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate settings update`);
-            }
-          }
-
-          if (shouldUpdateFontSettings) {
-            const fontSettings = this._getCurrentFontSettings();
-            // 🔧 FIX: Deduplicate font settings to prevent duplicate updates within debounce window
-            const fontSettingsKey = JSON.stringify(fontSettings);
-
-            if (fontSettingsKey !== this._lastFontSettingsKey) {
-              log(`📤 [EVENT-COORDINATOR] Sending font settings update`);
-              this._lastFontSettingsKey = fontSettingsKey;
-              this._sendMessage({
-                command: 'fontSettingsUpdate',
-                fontSettings,
-              }).catch((err) =>
-                log('❌ [EVENT-COORDINATOR] Failed to send font settings update:', err)
-              );
-              log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
-            } else {
-              log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate font settings update`);
-            }
-          }
-
-          // 🔧 FIX: Nullify timer after callback for clarity
-          this._configChangeDebounceTimer = null;
+          this._flushPendingConfigurationUpdate();
         }, 100); // 100ms debounce
       }
     });
 
     this._disposables.add(configChangeDisposable);
     log('✅ [EVENT-COORDINATOR] Configuration change listeners setup complete');
+  }
+
+  /** Returns true if the configuration change affects general (non-font) settings. */
+  private _affectsGeneralSettings(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+      event.affectsConfiguration('editor.multiCursorModifier') ||
+      event.affectsConfiguration('terminal.integrated.altClickMovesCursor') ||
+      event.affectsConfiguration('secondaryTerminal.altClickMovesCursor') ||
+      event.affectsConfiguration('secondaryTerminal.theme') ||
+      event.affectsConfiguration('secondaryTerminal.cursorBlink') ||
+      event.affectsConfiguration('secondaryTerminal.enableTerminalHeaderEnhancements') ||
+      event.affectsConfiguration('secondaryTerminal.activeBorderMode')
+    );
+  }
+
+  /** Returns true if the configuration change affects font settings. */
+  private _affectsFontSettings(event: vscode.ConfigurationChangeEvent): boolean {
+    return (
+      event.affectsConfiguration('terminal.integrated.fontSize') ||
+      event.affectsConfiguration('terminal.integrated.fontFamily') ||
+      event.affectsConfiguration('terminal.integrated.fontWeight') ||
+      event.affectsConfiguration('terminal.integrated.fontWeightBold') ||
+      event.affectsConfiguration('terminal.integrated.lineHeight') ||
+      event.affectsConfiguration('terminal.integrated.letterSpacing') ||
+      event.affectsConfiguration('editor.fontSize') ||
+      event.affectsConfiguration('editor.fontFamily') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeight') ||
+      event.affectsConfiguration('secondaryTerminal.fontWeightBold') ||
+      event.affectsConfiguration('secondaryTerminal.lineHeight') ||
+      event.affectsConfiguration('secondaryTerminal.letterSpacing')
+    );
+  }
+
+  /** Reads and resets the pending update flags, then sends any changed settings to the WebView. */
+  private _flushPendingConfigurationUpdate(): void {
+    // Read and reset the flags atomically
+    const shouldUpdateSettings = this._pendingSettingsUpdate;
+    const shouldUpdateFontSettings = this._pendingFontSettingsUpdate;
+    this._pendingSettingsUpdate = false;
+    this._pendingFontSettingsUpdate = false;
+
+    log(
+      '⚙️ [EVENT-COORDINATOR] Configuration changed (settings:',
+      shouldUpdateSettings,
+      ', fonts:',
+      shouldUpdateFontSettings,
+      ')'
+    );
+
+    // Send updated settings to WebView
+    if (shouldUpdateSettings) {
+      const settings = this._getCurrentSettings();
+      // 🔧 FIX: Deduplicate on entire settings payload, not just theme
+      // This ensures non-theme settings (cursorBlink, altClickMovesCursor, etc.) are sent
+      const settingsKey = JSON.stringify(settings);
+
+      if (settingsKey !== this._lastSentSettingsKey) {
+        log(`📤 [EVENT-COORDINATOR] Sending settings update`);
+        this._lastSentSettingsKey = settingsKey;
+        this._sendMessage({
+          command: 'settingsResponse',
+          settings,
+        }).catch((err) => log('❌ [EVENT-COORDINATOR] Failed to send settings update:', err));
+        log('⚙️ [EVENT-COORDINATOR] Sent settings update to WebView');
+      } else {
+        log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate settings update`);
+      }
+    }
+
+    if (shouldUpdateFontSettings) {
+      const fontSettings = this._getCurrentFontSettings();
+      // 🔧 FIX: Deduplicate font settings to prevent duplicate updates within debounce window
+      const fontSettingsKey = JSON.stringify(fontSettings);
+
+      if (fontSettingsKey !== this._lastFontSettingsKey) {
+        log(`📤 [EVENT-COORDINATOR] Sending font settings update`);
+        this._lastFontSettingsKey = fontSettingsKey;
+        this._sendMessage({
+          command: 'fontSettingsUpdate',
+          fontSettings,
+        }).catch((err) => log('❌ [EVENT-COORDINATOR] Failed to send font settings update:', err));
+        log('⚙️ [EVENT-COORDINATOR] Sent font settings update to WebView');
+      } else {
+        log(`⏭️ [EVENT-COORDINATOR] Skipping duplicate font settings update`);
+      }
+    }
+
+    // 🔧 FIX: Nullify timer after callback for clarity
+    this._configChangeDebounceTimer = null;
   }
 
   /**

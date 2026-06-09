@@ -62,7 +62,7 @@ export enum ServiceLifecycle {
 /**
  * Service registration interface
  */
-interface ServiceRegistration<T = any> {
+interface ServiceRegistration<T = unknown> {
   factory: () => T | Promise<T>;
   lifecycle: ServiceLifecycle;
   dependencies: ServiceType[];
@@ -144,10 +144,14 @@ export class DependencyContainer {
 
     // Start initialization
     registration.lifecycle = ServiceLifecycle.INITIALIZING;
-    registration.initializationPromise = this.initializeService<T>(serviceType, registration);
+    const initialization = this.initializeService<T>(
+      serviceType,
+      registration as ServiceRegistration<T>
+    );
+    registration.initializationPromise = initialization;
 
     try {
-      const instance = await registration.initializationPromise;
+      const instance = await initialization;
       registration.instance = instance;
       registration.lifecycle = ServiceLifecycle.INITIALIZED;
 
@@ -173,7 +177,7 @@ export class DependencyContainer {
     registration: ServiceRegistration<T>
   ): Promise<T> {
     // Resolve dependencies first
-    const resolvedDependencies: any[] = [];
+    const resolvedDependencies: unknown[] = [];
     for (const depType of registration.dependencies) {
       const dependency = await this.resolve(depType);
       resolvedDependencies.push(dependency);
@@ -188,7 +192,7 @@ export class DependencyContainer {
         resolvedDependencies,
         registration.dependencies
       );
-      await (instance as any).initialize(managerDeps);
+      await instance.initialize(managerDeps);
     }
 
     return instance;
@@ -198,7 +202,7 @@ export class DependencyContainer {
    * Build manager dependencies object from resolved dependencies
    */
   private buildManagerDependencies(
-    resolvedDeps: any[],
+    resolvedDeps: unknown[],
     depTypes: ServiceType[]
   ): ManagerDependencies {
     const dependencies: ManagerDependencies = {};
@@ -241,20 +245,21 @@ export class DependencyContainer {
   /**
    * Check if an instance is an enhanced base manager
    */
-  private isEnhancedBaseManager(instance: any): instance is IEnhancedBaseManager {
+  private isEnhancedBaseManager(instance: unknown): instance is IEnhancedBaseManager {
     return (
-      instance &&
-      typeof instance.initialize === 'function' &&
-      typeof instance.dispose === 'function' &&
-      typeof instance.getHealthStatus === 'function'
+      typeof instance === 'object' &&
+      instance !== null &&
+      typeof (instance as IEnhancedBaseManager).initialize === 'function' &&
+      typeof (instance as IEnhancedBaseManager).dispose === 'function' &&
+      typeof (instance as IEnhancedBaseManager).getHealthStatus === 'function'
     );
   }
 
   /**
    * Get all resolved services of a specific type
    */
-  public getResolvedServices(): Map<ServiceType, any> {
-    const resolved = new Map<ServiceType, any>();
+  public getResolvedServices(): Map<ServiceType, unknown> {
+    const resolved = new Map<ServiceType, unknown>();
 
     for (const [type, registration] of this.services) {
       if (registration.instance) {

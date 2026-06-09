@@ -65,7 +65,7 @@ interface ManagerHealthStatus {
 }
 
 // Alias for backward compatibility
-export interface IEnhancedBaseManager extends IEnhancedManager {}
+export type IEnhancedBaseManager = IEnhancedManager;
 
 // Additional segregated interfaces for specific use cases
 

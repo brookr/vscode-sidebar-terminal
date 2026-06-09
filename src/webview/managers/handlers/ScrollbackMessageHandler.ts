@@ -10,6 +10,7 @@ import { MessageCommand } from '../messageTypes';
 import { MessageQueue } from '../../utils/MessageQueue';
 import { ManagerLogger } from '../../utils/ManagerLogger';
 import { Terminal } from '@xterm/xterm';
+import { TerminalInstance } from '../../interfaces/ManagerInterfaces';
 import { TerminalCreationService } from '../../services/TerminalCreationService';
 import { StateTracker } from '../../utils/StateTracker';
 
@@ -38,6 +39,16 @@ export interface ScrollbackLine {
   content: string;
   type?: 'output' | 'input' | 'error';
   timestamp?: number;
+}
+
+/**
+ * Per-terminal entry in a restoreTerminalSessions batch request.
+ */
+interface RestoreTerminalSessionEntry {
+  terminalId: string;
+  scrollbackData?: string[];
+  restoreScrollback?: boolean;
+  progressive?: boolean;
 }
 
 /**
@@ -389,39 +400,11 @@ export class ScrollbackMessageHandler implements IMessageHandler {
       throw new Error('Terminal instance not provided');
     }
 
-    const scrollbackLines: ScrollbackLine[] = [];
-
     try {
       // 🎨 Use SerializeAddon if available (preserves ANSI color codes)
       if (serializeAddon) {
         this.logger.info('✅ Using SerializeAddon for color-preserving scrollback extraction');
-
-        const serialized = serializeAddon.serialize();
-        const lines = serialized.split('\n');
-        const startIndex = Math.max(0, lines.length - maxLines);
-
-        for (let i = startIndex; i < lines.length; i++) {
-          const content = lines[i];
-          // Include non-empty lines and preserve some empty lines for structure
-          if (content && (content.trim() || scrollbackLines.length > 0)) {
-            scrollbackLines.push({
-              content: content, // Includes ANSI escape codes for colors
-              type: 'output',
-              timestamp: Date.now(),
-            });
-          }
-        }
-
-        // Remove trailing empty lines
-        while (scrollbackLines.length > 0) {
-          const lastLine = scrollbackLines[scrollbackLines.length - 1];
-          if (!lastLine || !lastLine.content.trim()) {
-            scrollbackLines.pop();
-          } else {
-            break;
-          }
-        }
-
+        const scrollbackLines = this.extractScrollbackViaSerializeAddon(serializeAddon, maxLines);
         this.logger.info(
           `✅ Extracted ${scrollbackLines.length} lines with ANSI colors using SerializeAddon`
         );
@@ -433,63 +416,113 @@ export class ScrollbackMessageHandler implements IMessageHandler {
         '⚠️ SerializeAddon not available - extracting plain text (colors will be lost)'
       );
 
-      const buffer = terminal.buffer.active;
-      const bufferLength = buffer.length;
-      const viewportY = buffer.viewportY;
-      const baseY = buffer.baseY;
-
-      this.logger.debug(
-        `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
-      );
-
-      // Calculate range to extract (include scrollback + viewport)
-      const startLine = Math.max(0, bufferLength - maxLines);
-      const endLine = bufferLength;
-
-      this.logger.debug(
-        `Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`
-      );
-
-      for (let i = startLine; i < endLine; i++) {
-        try {
-          const line = buffer.getLine(i);
-          if (line) {
-            const content = line.translateToString(true); // trim whitespace
-
-            // Include non-empty lines and preserve some empty lines for structure
-            if (content.trim() || scrollbackLines.length > 0) {
-              scrollbackLines.push({
-                content: content,
-                type: 'output',
-                timestamp: Date.now(),
-              });
-            }
-          }
-        } catch (lineError) {
-          this.logger.warn(`Error extracting line ${i}: ${String(lineError)}`);
-          continue;
-        }
-      }
-
-      // Remove trailing empty lines
-      while (scrollbackLines.length > 0) {
-        const lastLine = scrollbackLines[scrollbackLines.length - 1];
-        if (!lastLine || !lastLine.content.trim()) {
-          scrollbackLines.pop();
-        } else {
-          break;
-        }
-      }
-
+      const scrollbackLines = this.extractScrollbackViaBuffer(terminal, maxLines);
       this.logger.info(
         `Successfully extracted ${scrollbackLines.length} lines from terminal buffer (plain text)`
       );
+      return scrollbackLines;
     } catch (error) {
       this.logger.error(`Error accessing terminal buffer: ${String(error)}`);
       throw error;
     }
+  }
 
+  /**
+   * Extract scrollback using the SerializeAddon (preserves ANSI color codes).
+   */
+  private extractScrollbackViaSerializeAddon(
+    serializeAddon: import('@xterm/addon-serialize').SerializeAddon,
+    maxLines: number
+  ): ScrollbackLine[] {
+    const scrollbackLines: ScrollbackLine[] = [];
+    const serialized = serializeAddon.serialize();
+    const lines = serialized.split('\n');
+    const startIndex = Math.max(0, lines.length - maxLines);
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const content = lines[i];
+      // Include non-empty lines and preserve some empty lines for structure
+      if (content && (content.trim() || scrollbackLines.length > 0)) {
+        scrollbackLines.push({
+          content: content, // Includes ANSI escape codes for colors
+          type: 'output',
+          timestamp: Date.now(),
+        });
+      }
+    }
+
+    this.trimTrailingEmptyLines(scrollbackLines);
     return scrollbackLines;
+  }
+
+  /**
+   * Extract scrollback from the terminal buffer as plain text (colors are lost).
+   */
+  private extractScrollbackViaBuffer(terminal: Terminal, maxLines: number): ScrollbackLine[] {
+    const scrollbackLines: ScrollbackLine[] = [];
+    const buffer = terminal.buffer.active;
+    const bufferLength = buffer.length;
+    const viewportY = buffer.viewportY;
+    const baseY = buffer.baseY;
+
+    this.logger.debug(
+      `Buffer info: length=${bufferLength}, viewportY=${viewportY}, baseY=${baseY}`
+    );
+
+    // Calculate range to extract (include scrollback + viewport)
+    const startLine = Math.max(0, bufferLength - maxLines);
+    const endLine = bufferLength;
+
+    this.logger.debug(`Extracting lines ${startLine} to ${endLine} (${endLine - startLine} lines)`);
+
+    for (let i = startLine; i < endLine; i++) {
+      this.extractBufferLine(buffer, i, scrollbackLines);
+    }
+
+    this.trimTrailingEmptyLines(scrollbackLines);
+    return scrollbackLines;
+  }
+
+  /**
+   * Extract a single buffer line into the accumulator, tolerating per-line errors.
+   */
+  private extractBufferLine(
+    buffer: import('@xterm/xterm').IBuffer,
+    index: number,
+    scrollbackLines: ScrollbackLine[]
+  ): void {
+    try {
+      const line = buffer.getLine(index);
+      if (!line) {
+        return;
+      }
+      const content = line.translateToString(true); // trim whitespace
+
+      // Include non-empty lines and preserve some empty lines for structure
+      if (content.trim() || scrollbackLines.length > 0) {
+        scrollbackLines.push({
+          content: content,
+          type: 'output',
+          timestamp: Date.now(),
+        });
+      }
+    } catch (lineError) {
+      this.logger.warn(`Error extracting line ${index}: ${String(lineError)}`);
+    }
+  }
+
+  /**
+   * Remove trailing empty lines from an extracted scrollback list (mutates in place).
+   */
+  private trimTrailingEmptyLines(scrollbackLines: ScrollbackLine[]): void {
+    while (scrollbackLines.length > 0) {
+      const lastLine = scrollbackLines[scrollbackLines.length - 1];
+      if (!lastLine || !lastLine.content.trim()) {
+        scrollbackLines.pop();
+      } else {
+        break;
+      }
+    }
   }
 
   /**
@@ -535,7 +568,7 @@ export class ScrollbackMessageHandler implements IMessageHandler {
   /**
    * Extract scrollback data from terminal instance
    */
-  private extractScrollbackFromTerminal(terminal: any, maxLines: number): string[] {
+  private extractScrollbackFromTerminal(terminal: TerminalInstance, maxLines: number): string[] {
     try {
       if (!terminal || !terminal.terminal) {
         return [];
@@ -624,18 +657,13 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     msg: MessageCommand,
     coordinator: IManagerCoordinator
   ): Promise<void> {
+    const terminals = msg.terminals as RestoreTerminalSessionEntry[] | undefined;
+
     this.logger.debug('[SCROLLBACK-RESTORE] handleRestoreTerminalSessions called', {
-      terminals: (msg as any).terminals?.length,
+      terminals: terminals?.length,
       timestamp: Date.now(),
     });
     this.logger.info('🔄 [RESTORE-SESSIONS] Handling restoreTerminalSessions message');
-
-    const terminals = (msg as any).terminals as Array<{
-      terminalId: string;
-      scrollbackData?: string[];
-      restoreScrollback?: boolean;
-      progressive?: boolean;
-    }>;
 
     if (!Array.isArray(terminals) || terminals.length === 0) {
       console.warn('[SCROLLBACK-RESTORE] No terminals provided for restoration');
@@ -660,112 +688,10 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     let failedCount = 0;
 
     for (const terminalData of terminals) {
-      const { terminalId, scrollbackData, restoreScrollback } = terminalData;
-      this.logger.debug(`[SCROLLBACK-RESTORE] Processing terminal: ${terminalId}`, {
-        hasScrollbackData: !!scrollbackData,
-        scrollbackLength: scrollbackData?.length ?? 0,
-        restoreScrollback,
-      });
-
-      if (!terminalId) {
-        console.warn('[SCROLLBACK-RESTORE] Terminal data missing terminalId');
-        this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
-        failedCount++;
-        continue;
-      }
-
-      // 🔒 Skip if already restored (prevents duplicate restoration)
-      if (this.restoredTerminals.has(terminalId)) {
-        this.logger.debug(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
-        this.logger.info(`⏭️ [RESTORE-SESSIONS] Already restored: ${terminalId}, skipping`);
-        continue;
-      }
-
-      if (!restoreScrollback || !scrollbackData || scrollbackData.length === 0) {
-        this.logger.debug(
-          `[SCROLLBACK-RESTORE] Skipping terminal ${terminalId} - no scrollback data or restoreScrollback=false`
-        );
-        this.logger.info(
-          `⏭️ [RESTORE-SESSIONS] Skipping terminal ${terminalId} - no scrollback data`
-        );
-        continue;
-      }
-
-      // Retry mechanism: wait for terminal to be available
-      const maxRetries = ScrollbackConfig.MAX_RESTORE_RETRIES;
-      const retryDelay = ScrollbackConfig.RESTORE_RETRY_DELAY_MS;
-      let restored = false;
-
-      for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
-        const terminalInstance = coordinator.getTerminalInstance(terminalId);
-        this.logger.debug(
-          `[SCROLLBACK-RESTORE] Retry ${retryCount + 1}/${maxRetries} for ${terminalId}: terminalInstance=${!!terminalInstance}`
-        );
-
-        if (terminalInstance) {
-          try {
-            // Delegate to existing restoreScrollback handler
-            // Pass skipDuplicateCheck=true since we handle duplicate prevention here
-            const restoreMsg: MessageCommand = {
-              command: 'restoreScrollback',
-              terminalId,
-              scrollbackContent: scrollbackData,
-            };
-
-            this.handleRestoreScrollback(restoreMsg, coordinator, true);
-
-            // 🔒 Mark as restored to prevent duplicate restoration
-            this.restoredTerminals.add(terminalId);
-
-            // 🔓 Mark restoration complete (starts 5s protection period countdown)
-            TerminalCreationService.markTerminalRestored(terminalId);
-            this.logger.debug(
-              `[SCROLLBACK-RESTORE] ✅ Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`
-            );
-            this.logger.info(
-              `✅ [RESTORE-SESSIONS] Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`
-            );
-            successCount++;
-            restored = true;
-            break; // Success - exit retry loop
-          } catch (error) {
-            console.error(
-              `[SCROLLBACK-RESTORE] ❌ Failed to restore terminal ${terminalId}:`,
-              error
-            );
-            this.logger.error(
-              `❌ [RESTORE-SESSIONS] Failed to restore terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`
-            );
-            // Even on error, mark as restored to prevent infinite retries
-            this.restoredTerminals.add(terminalId);
-            TerminalCreationService.markTerminalRestored(terminalId);
-            failedCount++;
-            break; // Error - don't retry
-          }
-        }
-
-        // Terminal not ready, retry after delay
-        if (retryCount < maxRetries - 1) {
-          this.logger.debug(
-            `[SCROLLBACK-RESTORE] ⏳ Terminal ${terminalId} not ready, waiting ${retryDelay}ms...`
-          );
-          this.logger.info(
-            `⏳ [RESTORE-SESSIONS] Terminal ${terminalId} not ready, retry ${retryCount + 1}/${maxRetries}`
-          );
-          await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        }
-      }
-
-      if (!restored) {
-        console.error(
-          `[SCROLLBACK-RESTORE] ❌ Terminal ${terminalId} not available after ${maxRetries} retries`
-        );
-        this.logger.error(
-          `❌ [RESTORE-SESSIONS] Terminal ${terminalId} not available after ${maxRetries} retries`
-        );
-        // Mark as "restored" to prevent future retry attempts
-        this.restoredTerminals.add(terminalId);
-        TerminalCreationService.markTerminalRestored(terminalId);
+      const outcome = await this.restoreSingleTerminalSession(terminalData, coordinator);
+      if (outcome === 'success') {
+        successCount++;
+      } else if (outcome === 'failed') {
         failedCount++;
       }
     }
@@ -783,6 +709,135 @@ export class ScrollbackMessageHandler implements IMessageHandler {
     this.logger.info(
       `✅ [RESTORE-SESSIONS] Completed restoration: ${successCount} success, ${failedCount} failed`
     );
+  }
+
+  /**
+   * Restore a single terminal's scrollback session, retrying until the terminal is available.
+   * @returns 'success' when restored, 'failed' on error/exhausted retries, 'skipped' otherwise.
+   */
+  private async restoreSingleTerminalSession(
+    terminalData: RestoreTerminalSessionEntry,
+    coordinator: IManagerCoordinator
+  ): Promise<'success' | 'failed' | 'skipped'> {
+    const { terminalId, scrollbackData, restoreScrollback } = terminalData;
+    this.logger.debug(`[SCROLLBACK-RESTORE] Processing terminal: ${terminalId}`, {
+      hasScrollbackData: !!scrollbackData,
+      scrollbackLength: scrollbackData?.length ?? 0,
+      restoreScrollback,
+    });
+
+    if (!terminalId) {
+      console.warn('[SCROLLBACK-RESTORE] Terminal data missing terminalId');
+      this.logger.warn('⚠️ [RESTORE-SESSIONS] Terminal data missing terminalId');
+      return 'failed';
+    }
+
+    // 🔒 Skip if already restored (prevents duplicate restoration)
+    if (this.restoredTerminals.has(terminalId)) {
+      this.logger.debug(`[SCROLLBACK-RESTORE] ⏭️ Already restored: ${terminalId}, skipping`);
+      this.logger.info(`⏭️ [RESTORE-SESSIONS] Already restored: ${terminalId}, skipping`);
+      return 'skipped';
+    }
+
+    if (!restoreScrollback || !scrollbackData || scrollbackData.length === 0) {
+      this.logger.debug(
+        `[SCROLLBACK-RESTORE] Skipping terminal ${terminalId} - no scrollback data or restoreScrollback=false`
+      );
+      this.logger.info(
+        `⏭️ [RESTORE-SESSIONS] Skipping terminal ${terminalId} - no scrollback data`
+      );
+      return 'skipped';
+    }
+
+    return this.attemptRestoreWithRetries(terminalId, scrollbackData, coordinator);
+  }
+
+  /**
+   * Attempt to restore scrollback for a ready terminal, retrying while it is unavailable.
+   */
+  private async attemptRestoreWithRetries(
+    terminalId: string,
+    scrollbackData: string[],
+    coordinator: IManagerCoordinator
+  ): Promise<'success' | 'failed'> {
+    const maxRetries = ScrollbackConfig.MAX_RESTORE_RETRIES;
+    const retryDelay = ScrollbackConfig.RESTORE_RETRY_DELAY_MS;
+
+    for (let retryCount = 0; retryCount < maxRetries; retryCount++) {
+      const terminalInstance = coordinator.getTerminalInstance(terminalId);
+      this.logger.debug(
+        `[SCROLLBACK-RESTORE] Retry ${retryCount + 1}/${maxRetries} for ${terminalId}: terminalInstance=${!!terminalInstance}`
+      );
+
+      if (terminalInstance) {
+        return this.performSessionRestore(terminalId, scrollbackData, coordinator);
+      }
+
+      // Terminal not ready, retry after delay
+      if (retryCount < maxRetries - 1) {
+        this.logger.debug(
+          `[SCROLLBACK-RESTORE] ⏳ Terminal ${terminalId} not ready, waiting ${retryDelay}ms...`
+        );
+        this.logger.info(
+          `⏳ [RESTORE-SESSIONS] Terminal ${terminalId} not ready, retry ${retryCount + 1}/${maxRetries}`
+        );
+        await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      }
+    }
+
+    console.error(
+      `[SCROLLBACK-RESTORE] ❌ Terminal ${terminalId} not available after ${maxRetries} retries`
+    );
+    this.logger.error(
+      `❌ [RESTORE-SESSIONS] Terminal ${terminalId} not available after ${maxRetries} retries`
+    );
+    // Mark as "restored" to prevent future retry attempts
+    this.restoredTerminals.add(terminalId);
+    TerminalCreationService.markTerminalRestored(terminalId);
+    return 'failed';
+  }
+
+  /**
+   * Perform the actual scrollback restore for a ready terminal instance.
+   */
+  private performSessionRestore(
+    terminalId: string,
+    scrollbackData: string[],
+    coordinator: IManagerCoordinator
+  ): 'success' | 'failed' {
+    try {
+      // Delegate to existing restoreScrollback handler
+      // Pass skipDuplicateCheck=true since we handle duplicate prevention here
+      const restoreMsg: MessageCommand = {
+        command: 'restoreScrollback',
+        terminalId,
+        scrollbackContent: scrollbackData,
+      };
+
+      this.handleRestoreScrollback(restoreMsg, coordinator, true);
+
+      // 🔒 Mark as restored to prevent duplicate restoration
+      this.restoredTerminals.add(terminalId);
+
+      // 🔓 Mark restoration complete (starts 5s protection period countdown)
+      TerminalCreationService.markTerminalRestored(terminalId);
+      this.logger.debug(
+        `[SCROLLBACK-RESTORE] ✅ Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`
+      );
+      this.logger.info(
+        `✅ [RESTORE-SESSIONS] Restored scrollback for terminal ${terminalId}: ${scrollbackData.length} lines`
+      );
+      return 'success';
+    } catch (error) {
+      console.error(`[SCROLLBACK-RESTORE] ❌ Failed to restore terminal ${terminalId}:`, error);
+      this.logger.error(
+        `❌ [RESTORE-SESSIONS] Failed to restore terminal ${terminalId}: ${error instanceof Error ? error.message : String(error)}`
+      );
+      // Even on error, mark as restored to prevent infinite retries
+      this.restoredTerminals.add(terminalId);
+      TerminalCreationService.markTerminalRestored(terminalId);
+      return 'failed';
+    }
   }
 
   /**

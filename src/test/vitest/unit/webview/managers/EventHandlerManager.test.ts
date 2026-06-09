@@ -301,6 +301,7 @@ describe('EventHandlerManager', () => {
   describe('Custom Events', () => {
     it('should dispatch custom event', async () => {
       const handler = vi.fn();
+      // eslint-disable-next-line no-restricted-syntax -- handler is stored and removed via removeEventListener below
       window.addEventListener('my-custom-event', handler);
 
       eventHandlerManager.dispatchCustomEvent('my-custom-event');
@@ -319,6 +320,7 @@ describe('EventHandlerManager', () => {
         receivedDetail = event.detail;
       };
 
+      // eslint-disable-next-line no-restricted-syntax -- handler is stored and removed via removeEventListener below
       window.addEventListener('detail-event', handler as EventListener);
       eventHandlerManager.dispatchCustomEvent('detail-event', detail);
 

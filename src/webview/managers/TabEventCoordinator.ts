@@ -216,7 +216,9 @@ export class TabEventCoordinator {
 
   // --- Private helpers ---
 
-  private getDisplayManager() {
+  private getDisplayManager():
+    | ReturnType<NonNullable<IManagerCoordinator['getDisplayModeManager']>>
+    | undefined {
     return this.deps.getCoordinator()?.getDisplayModeManager?.();
   }
 

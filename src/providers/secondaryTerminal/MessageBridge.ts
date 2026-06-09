@@ -23,6 +23,7 @@ export class MessageBridge {
   ): void {
     this.logger('🔧 [BRIDGE] Registering webview message listener');
 
+    // eslint-disable-next-line no-restricted-syntax -- disposable is stored below and pushed to extensionContext.subscriptions for proper disposal
     const disposable = webviewView.webview.onDidReceiveMessage(async (message: unknown) => {
       this.logger('📨 [BRIDGE] Message received from WebView');
 

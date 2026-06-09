@@ -26,6 +26,13 @@ import { webview as log } from '../../utils/logger';
 // Types and Interfaces
 // ============================================================================
 
+/** Minimal VS Code webview API surface used by this service. */
+interface VsCodeApiHandle {
+  postMessage: (message: unknown) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
+}
+
 interface SerializeOptions {
   scrollback?: number;
   excludeAltBuffer?: boolean;
@@ -70,20 +77,18 @@ export class WebViewPersistenceService {
   private serializedCache = new Map<string, SerializedTerminalData>();
   private terminalListenerDisposables = new Map<string, { dispose(): void }[]>();
 
-  private vscodeApi: {
-    postMessage: (message: unknown) => void;
-    getState: () => unknown;
-    setState: (state: unknown) => void;
-  };
+  private vscodeApi: VsCodeApiHandle;
 
   private static readonly AUTO_SAVE_DEBOUNCE_MS = 3000; // 3 seconds
   private static readonly DEFAULT_SCROLLBACK = 1000;
   private static readonly PROGRESSIVE_THRESHOLD = 500; // lines
 
   constructor() {
-    // Use globally acquired VS Code API from main.ts to avoid "already acquired" error
-    // @ts-ignore - VS Code API stored on window by main.ts
-    this.vscodeApi = window.vscodeApi;
+    // Use globally acquired VS Code API from main.ts to avoid "already acquired" error.
+    // main.ts stores the acquired API on the window; it is not part of the standard
+    // Window type, so read it through a localized typed view.
+    this.vscodeApi = (window as Window & { vscodeApi?: VsCodeApiHandle })
+      .vscodeApi as VsCodeApiHandle;
 
     if (!this.vscodeApi) {
       throw new Error('VS Code API not available on window. main.ts should acquire it first.');
@@ -429,7 +434,7 @@ export class WebViewPersistenceService {
    * Setup auto-save with debounce
    */
   private setupAutoSave(terminalId: string, terminal: Terminal): void {
-    const scheduleAutoSave = () => {
+    const scheduleAutoSave = (): void => {
       const existingTimer = this.autoSaveTimers.get(terminalId);
       if (existingTimer) {
         clearTimeout(existingTimer);
@@ -490,7 +495,7 @@ export class WebViewPersistenceService {
   private writeBatchToTerminal(terminal: Terminal, lines: string[]): void {
     const BATCH_SIZE = 100;
 
-    const writeBatch = (startIndex: number) => {
+    const writeBatch = (startIndex: number): void => {
       const endIndex = Math.min(startIndex + BATCH_SIZE, lines.length);
 
       let chunk = '';

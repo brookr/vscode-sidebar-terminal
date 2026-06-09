@@ -364,7 +364,7 @@ export class RenderingOptimizer implements Disposable {
     container: HTMLElement,
     terminalId: string
   ): void {
-    const wheelHandler = (event: WheelEvent) => {
+    const wheelHandler = (event: WheelEvent): void => {
       const device = this.detectDevice(event);
       this.updateSmoothScrollDuration(terminal, device.smoothScrollDuration);
     };

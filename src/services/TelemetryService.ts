@@ -107,7 +107,7 @@ export class TelemetryService {
   /**
    * Send telemetry data (internal implementation)
    */
-  private sendTelemetryData(eventName: string, data: Record<string, any> = {}): void {
+  private sendTelemetryData(eventName: string, data: Record<string, unknown> = {}): void {
     // VS Code's TelemetryLogger automatically handles:
     // - Checking user's telemetry opt-out settings
     // - HTTPS encryption
@@ -125,7 +125,7 @@ export class TelemetryService {
   /**
    * Send error telemetry (internal implementation)
    */
-  private sendErrorTelemetry(error: Error, data: Record<string, any> = {}): void {
+  private sendErrorTelemetry(error: Error, data: Record<string, unknown> = {}): void {
     if (process.env.NODE_ENV === 'development') {
       console.error(`[Telemetry Error] ${error.message}:`, data);
     }

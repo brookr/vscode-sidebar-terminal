@@ -85,37 +85,53 @@ class ConfigurationRegistry {
       return { isValid: true, errors: [] };
     }
 
-    const errors: string[] = [];
-
-    // Type validation
-    if (schema.type === 'number' && typeof value !== 'number') {
-      errors.push(`Expected number, got ${typeof value}`);
-    } else if (schema.type === 'string' && typeof value !== 'string') {
-      errors.push(`Expected string, got ${typeof value}`);
-    } else if (schema.type === 'boolean' && typeof value !== 'boolean') {
-      errors.push(`Expected boolean, got ${typeof value}`);
-    } else if (schema.type === 'array' && !Array.isArray(value)) {
-      errors.push(`Expected array, got ${typeof value}`);
-    } else if (schema.type === 'object' && (typeof value !== 'object' || value === null)) {
-      errors.push(`Expected object, got ${typeof value}`);
-    }
-
-    // Range validation for numbers
-    if (schema.type === 'number' && typeof value === 'number') {
-      if (schema.minimum !== undefined && value < schema.minimum) {
-        errors.push(`Value ${value} is below minimum ${schema.minimum}`);
-      }
-      if (schema.maximum !== undefined && value > schema.maximum) {
-        errors.push(`Value ${value} exceeds maximum ${schema.maximum}`);
-      }
-    }
-
-    // Enum validation
-    if (schema.enum && !schema.enum.includes(value)) {
-      errors.push(`Value ${value} is not one of allowed values: ${schema.enum.join(', ')}`);
-    }
+    const errors: string[] = [
+      ...this._validateType(schema, value),
+      ...this._validateRange(schema, value),
+      ...this._validateEnum(schema, value),
+    ];
 
     return { isValid: errors.length === 0, errors };
+  }
+
+  private _validateType(schema: ConfigurationSchema, value: unknown): string[] {
+    // Type validation
+    if (schema.type === 'number' && typeof value !== 'number') {
+      return [`Expected number, got ${typeof value}`];
+    } else if (schema.type === 'string' && typeof value !== 'string') {
+      return [`Expected string, got ${typeof value}`];
+    } else if (schema.type === 'boolean' && typeof value !== 'boolean') {
+      return [`Expected boolean, got ${typeof value}`];
+    } else if (schema.type === 'array' && !Array.isArray(value)) {
+      return [`Expected array, got ${typeof value}`];
+    } else if (schema.type === 'object' && (typeof value !== 'object' || value === null)) {
+      return [`Expected object, got ${typeof value}`];
+    }
+    return [];
+  }
+
+  private _validateRange(schema: ConfigurationSchema, value: unknown): string[] {
+    // Range validation for numbers
+    if (schema.type !== 'number' || typeof value !== 'number') {
+      return [];
+    }
+
+    const errors: string[] = [];
+    if (schema.minimum !== undefined && value < schema.minimum) {
+      errors.push(`Value ${value} is below minimum ${schema.minimum}`);
+    }
+    if (schema.maximum !== undefined && value > schema.maximum) {
+      errors.push(`Value ${value} exceeds maximum ${schema.maximum}`);
+    }
+    return errors;
+  }
+
+  private _validateEnum(schema: ConfigurationSchema, value: unknown): string[] {
+    // Enum validation
+    if (schema.enum && !schema.enum.includes(value)) {
+      return [`Value ${value} is not one of allowed values: ${schema.enum.join(', ')}`];
+    }
+    return [];
   }
 }
 

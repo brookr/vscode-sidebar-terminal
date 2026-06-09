@@ -3,7 +3,7 @@
  * wrapped line processing, and empty line trimming.
  */
 
-import { Terminal, IBufferLine } from '@xterm/xterm';
+import { Terminal, IBufferLine, IBuffer } from '@xterm/xterm';
 import { SerializeAddon } from '@xterm/addon-serialize';
 import { terminalLogger } from '../utils/ManagerLogger';
 import { BaseManager } from './BaseManager';
@@ -27,8 +27,8 @@ interface ScrollbackData {
 interface IScrollbackManager {
   saveScrollback(terminalId: string, options?: ScrollbackOptions): ScrollbackData | null;
   restoreScrollback(terminalId: string, content: string): boolean;
-  getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: any): string;
-  getBufferReverseIterator(buffer: any, startLine: number): IterableIterator<IBufferLine>;
+  getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: IBuffer): string;
+  getBufferReverseIterator(buffer: IBuffer, startLine: number): IterableIterator<IBufferLine>;
 }
 
 export class ScrollbackManager extends BaseManager implements IScrollbackManager {
@@ -165,7 +165,7 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
    * Get full buffer line including wrapped continuation lines.
    * Detects wrapped lines using line.isWrapped and joins them backwards.
    */
-  public getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: any): string {
+  public getFullBufferLine(line: IBufferLine, lineIndex: number, buffer: IBuffer): string {
     try {
       let fullLine = line.translateToString(true);
       let currentIndex = lineIndex;
@@ -193,7 +193,10 @@ export class ScrollbackManager extends BaseManager implements IScrollbackManager
   }
 
   /** Iterates buffer from startLine backwards to 0. */
-  public *getBufferReverseIterator(buffer: any, startLine: number): IterableIterator<IBufferLine> {
+  public *getBufferReverseIterator(
+    buffer: IBuffer,
+    startLine: number
+  ): IterableIterator<IBufferLine> {
     try {
       for (let i = startLine; i >= 0; i--) {
         const line = buffer.getLine(i);

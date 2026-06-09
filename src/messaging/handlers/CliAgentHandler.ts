@@ -164,7 +164,7 @@ export class CliAgentHandler extends BaseMessageHandler {
     message: WebviewMessage,
     context: IMessageHandlerContext
   ): Promise<void> {
-    const responseData = message as any;
+    const responseData = message as WebviewMessage & { isForceReconnect?: boolean };
     const { terminalId, success, newStatus, agentType, reason, isForceReconnect } = responseData;
 
     context.logger.info(`AI Agent operation result for terminal ${terminalId}:`, {
@@ -223,7 +223,7 @@ export class CliAgentHandler extends BaseMessageHandler {
         return 'none';
       default:
         this.logActivity(
-          undefined as any,
+          undefined as unknown as IMessageHandlerContext,
           `Unknown legacy status: ${legacyStatus}, defaulting to 'none'`
         );
         return 'none';

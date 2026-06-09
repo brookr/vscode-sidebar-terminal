@@ -64,6 +64,7 @@ class Logger implements Disposable {
   }
 
   private setupProductionLogging(): void {
+    // eslint-disable-next-line no-restricted-syntax -- stored in this.flushTimer and cleared in dispose()
     this.flushTimer = setInterval(() => this.flushBuffer(), this.bufferFlushInterval);
   }
 

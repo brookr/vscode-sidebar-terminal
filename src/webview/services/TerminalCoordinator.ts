@@ -20,7 +20,12 @@ import { DOMUtils } from '../utils/DOMUtils';
 interface InternalTerminalInfo extends TerminalInfo {
   container: HTMLElement;
   fitAddon: FitAddon;
+  // Mutable internally; exposed as readonly via TerminalInfo.
+  isActive: boolean;
 }
+
+/** Any of the handler signatures declared on {@link TerminalCoordinatorEvents}. */
+type TerminalCoordinatorEventListener = TerminalCoordinatorEvents[keyof TerminalCoordinatorEvents];
 
 /**
  * Core terminal coordination service
@@ -28,7 +33,10 @@ interface InternalTerminalInfo extends TerminalInfo {
  */
 export class TerminalCoordinator extends BaseManager implements ITerminalCoordinator {
   private readonly terminals = new Map<string, InternalTerminalInfo>();
-  private readonly eventListeners = new Map<keyof TerminalCoordinatorEvents, Set<Function>>();
+  private readonly eventListeners = new Map<
+    keyof TerminalCoordinatorEvents,
+    Set<TerminalCoordinatorEventListener>
+  >();
   private activeTerminalId: string | undefined;
   private readonly config: TerminalCoordinatorConfig;
   private terminalCounter = 0;
@@ -89,7 +97,7 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     if (listeners) {
       for (const listener of listeners) {
         try {
-          (listener as any)(...args);
+          (listener as (...handlerArgs: Parameters<TerminalCoordinatorEvents[K]>) => void)(...args);
         } catch (error) {
           this.logger(`Error in event listener for ${event}: ${error}`);
         }
@@ -219,14 +227,14 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
     if (this.activeTerminalId) {
       const currentActive = this.terminals.get(this.activeTerminalId);
       if (currentActive) {
-        (currentActive as any).isActive = false;
+        currentActive.isActive = false;
         currentActive.container.style.display = 'none';
       }
     }
 
     // Activate new terminal
     this.activeTerminalId = terminalId;
-    (terminalInfo as any).isActive = true;
+    terminalInfo.isActive = true;
     terminalInfo.container.style.display = 'block';
     terminalInfo.terminal.focus();
     // Reset xterm.js inline styles before fit to allow terminal expansion
@@ -351,7 +359,7 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   ): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
-      listeners.add(listener as Function);
+      listeners.add(listener as TerminalCoordinatorEventListener);
     }
   }
 
@@ -361,7 +369,7 @@ export class TerminalCoordinator extends BaseManager implements ITerminalCoordin
   ): void {
     const listeners = this.eventListeners.get(event);
     if (listeners) {
-      listeners.delete(listener as Function);
+      listeners.delete(listener as TerminalCoordinatorEventListener);
     }
   }
 }

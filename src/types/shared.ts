@@ -12,6 +12,7 @@ export type ActiveBorderMode = 'none' | 'always' | 'multipleOnly';
  * Base terminal configuration interface
  * Foundation type for all terminal configurations
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- intentional empty foundation interface; concrete config shapes are layered on via the interfaces that extend it
 interface BaseTerminalConfig {}
 
 /**
@@ -533,7 +534,7 @@ export interface WebviewMessage {
     // Panel navigation configuration (Extension → WebView)
     | 'panelNavigationEnabledChanged'; // Panel navigation enabled setting changed
   config?: Partial<TerminalConfig>; // Allow partial config with fontSettings only
-  data?: string | any[]; // Support both string and array data
+  data?: string | unknown[]; // Support both string and array data
   exitCode?: number;
   terminalId?: string;
   terminalName?: string;
@@ -660,14 +661,14 @@ export interface WebviewMessage {
 
   // Persistence-related properties
   terminalIds?: string[]; // Array of terminal IDs
-  terminalData?: any; // Terminal data for persistence
+  terminalData?: unknown; // Terminal data for persistence
 
   // 🎯 FIX: Added for unified deletion processing
   success?: boolean; // Deletion operation success/failure
 
   // Additional WebView message properties
-  terminal?: any; // Terminal object for responses
-  scrollback?: any; // Scrollback data for terminal restore
+  terminal?: unknown; // Terminal object for responses
+  scrollback?: unknown; // Scrollback data for terminal restore
   totalCount?: number; // Total count for terminal operations
 
   // Custom event properties

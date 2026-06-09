@@ -128,7 +128,10 @@ export class MessageLogger {
    * Log message sent
    */
   public logMessageSent(source: string, message: unknown): void {
-    const command = (message as any)?.command || 'unknown';
+    const command =
+      (typeof message === 'object' && message !== null && 'command' in message
+        ? (message as { command?: unknown }).command
+        : undefined) || 'unknown';
     this.debug(source, `Message sent: ${command}`, { command, timestamp: Date.now() });
   }
 
@@ -280,7 +283,7 @@ export class MessageLogger {
    * Set minimum log level
    */
   public setMinLevel(level: LogLevel): void {
-    (this.config as any).minLevel = level;
+    this.config.minLevel = level;
   }
 
   /**

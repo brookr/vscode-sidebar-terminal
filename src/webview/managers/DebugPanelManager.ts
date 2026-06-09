@@ -344,60 +344,12 @@ export class DebugPanelManager {
           🖥️ Terminal Instances
         </div>
         <div style="margin-left: 16px; color: #e5e7eb; max-height: 120px; overflow-y: auto;">
-          ${
-            info.terminals.length > 0
-              ? info.terminals
-                  .map(
-                    (t) => `
-              <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
-                <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
-                ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
-              </div>
-            `
-                  )
-                  .join('')
-              : '<div style="color: #6b7280; font-style: italic;">No terminals</div>'
-          }
+          ${this.formatTerminalList(info)}
         </div>
       </div>
 
       <!-- Pending Operations -->
-      ${
-        systemStatus.pendingOperations.deletions.length > 0 ||
-        systemStatus.pendingOperations.creations > 0
-          ? `
-        <div style="margin-bottom: 12px;">
-          <div style="color: ${warningColor}; font-weight: bold; margin-bottom: 4px;">
-            ⏳ Pending Operations
-          </div>
-          <div style="margin-left: 16px; color: #e5e7eb;">
-            ${
-              systemStatus.pendingOperations.deletions.length > 0
-                ? `
-              <div style="margin: 2px 0;">
-                <span style="color: #ef4444;">🗑️ Deletions (${systemStatus.pendingOperations.deletions.length}):</span>
-                <div style="margin-left: 16px; font-size: 10px; color: #fca5a5;">
-                  ${systemStatus.pendingOperations.deletions.map((id) => `• ${id}`).join('<br>')}
-                </div>
-              </div>
-            `
-                : ''
-            }
-            ${
-              systemStatus.pendingOperations.creations > 0
-                ? `
-              <div style="margin: 2px 0;">
-                <span style="color: #f59e0b;">📥 Creations:</span>
-                <span style="color: #fbbf24; font-weight: bold;">${systemStatus.pendingOperations.creations} queued</span>
-              </div>
-            `
-                : ''
-            }
-          </div>
-        </div>
-      `
-          : ''
-      }
+      ${this.formatPendingOperations(systemStatus, warningColor)}
 
       <!-- Number Recycling Status -->
       <div style="margin-bottom: 12px;">
@@ -406,15 +358,7 @@ export class DebugPanelManager {
         </div>
         <div style="margin-left: 16px; color: #e5e7eb;">
           <div style="display: flex; gap: 8px; margin-bottom: 4px;">
-            ${[1, 2, 3, 4, 5]
-              .map((num) => {
-                const isUsed = info.terminals.some((t) => t.id === `terminal-${num}`);
-                const isAvailable = info.availableSlots.includes(num);
-                const color = isUsed ? '#ef4444' : isAvailable ? '#10b981' : '#6b7280';
-                const symbol = isUsed ? '●' : isAvailable ? '○' : '◌';
-                return `<span style="color: ${color}; font-weight: bold; width: 20px; text-align: center;">${num}${symbol}</span>`;
-              })
-              .join('')}
+            ${this.formatNumberRecycling(info)}
           </div>
           <div style="font-size: 10px; color: #9ca3af;">
             <span style="color: #ef4444;">● Used</span> |
@@ -454,6 +398,76 @@ export class DebugPanelManager {
         </div>
       </div>
     `;
+  }
+
+  /** Renders the list of terminal instances (or a placeholder when there are none). */
+  private formatTerminalList(info: DebugInfo): string {
+    return info.terminals.length > 0
+      ? info.terminals
+          .map(
+            (t) => `
+              <div style="margin: 2px 0; padding: 2px 4px; background: ${t.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(75, 85, 99, 0.3)'}; border-radius: 3px; border-left: 2px solid ${t.isActive ? '#10b981' : '#6b7280'};">
+                <span style="color: ${t.isActive ? '#10b981' : '#9ca3af'};">${t.id}</span>
+                ${t.isActive ? '<span style="color: #fbbf24;">●</span>' : ''}
+              </div>
+            `
+          )
+          .join('')
+      : '<div style="color: #6b7280; font-style: italic;">No terminals</div>';
+  }
+
+  /** Renders the pending operations section, or an empty string when nothing is pending. */
+  private formatPendingOperations(
+    systemStatus: SystemStatusSnapshot,
+    warningColor: string
+  ): string {
+    return systemStatus.pendingOperations.deletions.length > 0 ||
+      systemStatus.pendingOperations.creations > 0
+      ? `
+        <div style="margin-bottom: 12px;">
+          <div style="color: ${warningColor}; font-weight: bold; margin-bottom: 4px;">
+            ⏳ Pending Operations
+          </div>
+          <div style="margin-left: 16px; color: #e5e7eb;">
+            ${
+              systemStatus.pendingOperations.deletions.length > 0
+                ? `
+              <div style="margin: 2px 0;">
+                <span style="color: #ef4444;">🗑️ Deletions (${systemStatus.pendingOperations.deletions.length}):</span>
+                <div style="margin-left: 16px; font-size: 10px; color: #fca5a5;">
+                  ${systemStatus.pendingOperations.deletions.map((id) => `• ${id}`).join('<br>')}
+                </div>
+              </div>
+            `
+                : ''
+            }
+            ${
+              systemStatus.pendingOperations.creations > 0
+                ? `
+              <div style="margin: 2px 0;">
+                <span style="color: #f59e0b;">📥 Creations:</span>
+                <span style="color: #fbbf24; font-weight: bold;">${systemStatus.pendingOperations.creations} queued</span>
+              </div>
+            `
+                : ''
+            }
+          </div>
+        </div>
+      `
+      : '';
+  }
+
+  /** Renders the per-slot number-recycling status indicators (slots 1-5). */
+  private formatNumberRecycling(info: DebugInfo): string {
+    return [1, 2, 3, 4, 5]
+      .map((num) => {
+        const isUsed = info.terminals.some((t) => t.id === `terminal-${num}`);
+        const isAvailable = info.availableSlots.includes(num);
+        const color = isUsed ? '#ef4444' : isAvailable ? '#10b981' : '#6b7280';
+        const symbol = isUsed ? '●' : isAvailable ? '○' : '◌';
+        return `<span style="color: ${color}; font-weight: bold; width: 20px; text-align: center;">${num}${symbol}</span>`;
+      })
+      .join('');
   }
 
   public dispose(): void {

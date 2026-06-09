@@ -68,6 +68,7 @@ export class PanelLocationController {
 
   private setupPanelLocationSync(): void {
     // Panel location (sidebar/panel) changes - keep split layout direction in sync
+    // eslint-disable-next-line no-restricted-syntax -- handler reference is stored as this.eventHandler and removed via removeEventListener in dispose()
     window.addEventListener('terminal-panel-location-changed', this.eventHandler);
 
     // Best-effort sync: apply the current location even if the first event fired before full UI was ready

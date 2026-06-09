@@ -428,22 +428,21 @@ export class KeyboardShortcutService {
    * Send message to webview with backward compatibility.
    */
   private sendWebviewMessage(message: Record<string, unknown>): void {
-    if (
-      this._webviewProvider &&
-      'sendMessageToWebview' in this._webviewProvider &&
-      typeof (this._webviewProvider as any).sendMessageToWebview === 'function'
-    ) {
-      (this._webviewProvider as any).sendMessageToWebview(message);
+    const provider = this._webviewProvider as
+      | (SecondaryTerminalProvider & {
+          sendMessageToWebview?: (message: Record<string, unknown>) => void;
+          sendMessage?: (message: Record<string, unknown>) => void;
+        })
+      | null;
+
+    if (provider && typeof provider.sendMessageToWebview === 'function') {
+      provider.sendMessageToWebview(message);
       log(`📨 [KEYBOARD] Sent to webview: ${String(message.command)}`, message);
       return;
     }
 
-    if (
-      this._webviewProvider &&
-      'sendMessage' in this._webviewProvider &&
-      typeof (this._webviewProvider as any).sendMessage === 'function'
-    ) {
-      (this._webviewProvider as any).sendMessage(message);
+    if (provider && typeof provider.sendMessage === 'function') {
+      provider.sendMessage(message);
       log(`📨 [KEYBOARD] Sent to webview: ${String(message.command)}`, message);
       return;
     }

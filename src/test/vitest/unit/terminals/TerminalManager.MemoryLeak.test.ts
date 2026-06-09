@@ -179,7 +179,9 @@ describe('TerminalManager - Memory Leak Detection', () => {
       dispose: () => {},
     };
 
-    terminalManager.setShellIntegrationService(mockService);
+    terminalManager.setShellIntegrationService(
+      mockService as unknown as Parameters<TerminalManager['setShellIntegrationService']>[0]
+    );
 
     // Dispose should not throw
     expect(() => terminalManager!.dispose()).not.toThrow();

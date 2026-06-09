@@ -180,7 +180,7 @@ export class MouseTrackingService {
     targetElement: HTMLElement,
     state: MouseTrackingState
   ): void {
-    const wheelHandler = (event: WheelEvent) => {
+    const wheelHandler = (event: WheelEvent): void => {
       // Only handle if mouse tracking is still active
       if (state.activeModes.size === 0) return;
 

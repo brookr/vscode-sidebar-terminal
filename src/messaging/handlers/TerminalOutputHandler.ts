@@ -6,6 +6,7 @@
  */
 
 import { WebviewMessage } from '../../types/common';
+import { TerminalInstance } from '../../webview/interfaces/ManagerInterfaces';
 import { IMessageHandlerContext, MessagePriority } from '../UnifiedMessageDispatcher';
 import { BaseMessageHandler } from './BaseMessageHandler';
 
@@ -52,46 +53,68 @@ export class TerminalOutputHandler extends BaseMessageHandler {
         `OUTPUT message received for terminal ${terminal.name} (${terminalId}): ${data.length} chars`
       );
 
-      // Log significant CLI agent patterns for optimization
-      if (
-        data.length > 2000 &&
-        (data.includes('Gemini') || data.includes('gemini') || data.includes('Claude'))
-      ) {
-        context.logger.info(`CLI Agent output detected for terminal ${terminal.name}`, {
-          terminalId,
-          terminalName: terminal.name,
-          dataLength: data.length,
-          containsGeminiPattern: data.includes('Gemini') || data.includes('gemini'),
-          containsClaudePattern: data.includes('Claude') || data.includes('claude'),
-        });
-      }
+      this.logCliAgentPattern(context, terminal, terminalId, data);
 
-      try {
-        // Use PerformanceManager for buffered write with scroll preservation
-        const managers = context.coordinator.getManagers();
-        if (managers && managers.performance) {
-          managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
-          this.logActivity(
-            context,
-            `Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`
-          );
-        } else {
-          // Fallback to direct write if performance manager is not available
-          terminal.terminal.write(data);
-          this.logActivity(
-            context,
-            `Output written directly to ${terminal.name}: ${data.length} chars`
-          );
-        }
-      } catch (error) {
-        this.handleError(
+      this.writeOutput(context, message, terminal, terminalId, data);
+    } catch (error) {
+      this.handleError(context, message.command, error);
+    }
+  }
+
+  /**
+   * Log significant CLI agent output patterns for optimization.
+   */
+  private logCliAgentPattern(
+    context: IMessageHandlerContext,
+    terminal: TerminalInstance,
+    terminalId: string,
+    data: string
+  ): void {
+    const containsGeminiPattern = data.includes('Gemini') || data.includes('gemini');
+    if (data.length > 2000 && (containsGeminiPattern || data.includes('Claude'))) {
+      context.logger.info(`CLI Agent output detected for terminal ${terminal.name}`, {
+        terminalId,
+        terminalName: terminal.name,
+        dataLength: data.length,
+        containsGeminiPattern,
+        containsClaudePattern: data.includes('Claude') || data.includes('claude'),
+      });
+    }
+  }
+
+  /**
+   * Write output via the PerformanceManager when available, falling back to a direct write.
+   */
+  private writeOutput(
+    context: IMessageHandlerContext,
+    message: WebviewMessage,
+    terminal: TerminalInstance,
+    terminalId: string,
+    data: string
+  ): void {
+    try {
+      // Use PerformanceManager for buffered write with scroll preservation
+      const managers = context.coordinator.getManagers();
+      if (managers && managers.performance) {
+        managers.performance.bufferedWrite(data, terminal.terminal, terminalId);
+        this.logActivity(
           context,
-          message.command,
-          `Error writing output to terminal ${terminal.name}: ${error}`
+          `Output buffered via PerformanceManager for ${terminal.name}: ${data.length} chars`
+        );
+      } else {
+        // Fallback to direct write if performance manager is not available
+        terminal.terminal.write(data);
+        this.logActivity(
+          context,
+          `Output written directly to ${terminal.name}: ${data.length} chars`
         );
       }
     } catch (error) {
-      this.handleError(context, message.command, error);
+      this.handleError(
+        context,
+        message.command,
+        `Error writing output to terminal ${terminal.name}: ${error}`
+      );
     }
   }
 }

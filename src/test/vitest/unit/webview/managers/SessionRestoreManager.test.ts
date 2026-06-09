@@ -459,6 +459,7 @@ describe('SessionRestoreManager', () => {
     it('should handle non-Error exceptions', async () => {
       const mockTerminal = createMockTerminal();
       vi.mocked(mockTerminal.clear).mockImplementation(() => {
+        // eslint-disable-next-line no-throw-literal -- intentionally throwing a non-Error to exercise the non-Error exception path
         throw 'String error';
       });
       const mockInstance = createMockTerminalInstance(mockTerminal);

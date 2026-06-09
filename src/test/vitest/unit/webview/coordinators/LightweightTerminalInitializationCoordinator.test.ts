@@ -125,7 +125,9 @@ function createCoordinator(): {
     displayModeManager: { initialize: vi.fn() },
     terminalContainerManager: { initialize: vi.fn() },
     debugPanelManager: { setCallbacks: vi.fn() },
-    fontSettingsService: { setApplicator: vi.fn() },
+    fontSettingsService: {
+      setApplicator: vi.fn(),
+    } as unknown as ILightweightTerminalInitializationDependencies['fontSettingsService'],
     eventHandlerManager: {
       setMessageEventHandler: vi.fn(),
       onPageUnload: vi.fn(),

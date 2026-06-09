@@ -43,6 +43,7 @@ export class FindInTerminalManager implements IFindInTerminalManager {
   private matchCounter: HTMLElement | null = null;
   private currentTerminalId: string | null = null;
   private lastSearchTerm: string = '';
+  private searchTimeout: ReturnType<typeof setTimeout> | undefined;
   private findOptions: FindOptions = {
     caseSensitive: false,
     wholeWord: false,
@@ -72,7 +73,22 @@ export class FindInTerminalManager implements IFindInTerminalManager {
    */
   private setupStyles(): void {
     const style = document.createElement('style');
-    style.textContent = `
+    style.textContent = this.getStyleContent();
+    document.head.appendChild(style);
+  }
+
+  /**
+   * CSS for the find-in-terminal panel and search highlights.
+   */
+  private getStyleContent(): string {
+    return this.getPanelStyles() + this.getButtonStyles() + this.getHighlightStyles();
+  }
+
+  /**
+   * CSS for the find-in-terminal panel chrome (inputs, buttons, layout).
+   */
+  private getPanelStyles(): string {
+    return `
       .find-in-terminal-panel {
         position: absolute;
         top: 10px;
@@ -120,7 +136,14 @@ export class FindInTerminalManager implements IFindInTerminalManager {
         border-color: var(--vscode-inputValidation-errorBorder);
         background: var(--vscode-inputValidation-errorBackground);
       }
+    `;
+  }
 
+  /**
+   * CSS for the find-in-terminal buttons and option toggles.
+   */
+  private getButtonStyles(): string {
+    return `
       .find-button {
         background: var(--vscode-button-secondaryBackground);
         border: 1px solid var(--vscode-button-border);
@@ -209,7 +232,14 @@ export class FindInTerminalManager implements IFindInTerminalManager {
       .find-close-button:hover {
         background: var(--vscode-toolbar-hoverBackground);
       }
+    `;
+  }
 
+  /**
+   * CSS for the xterm search-match highlight decorations.
+   */
+  private getHighlightStyles(): string {
+    return `
       /* Search highlight styles */
       .terminal .xterm-search-highlight {
         background-color: var(--vscode-editor-findMatchBackground) !important;
@@ -222,7 +252,6 @@ export class FindInTerminalManager implements IFindInTerminalManager {
         border: 1px solid var(--vscode-editor-findMatchBorder);
       }
     `;
-    document.head.appendChild(style);
   }
 
   /**
@@ -447,8 +476,8 @@ export class FindInTerminalManager implements IFindInTerminalManager {
     }
 
     // Debounce search
-    clearTimeout((this as any).searchTimeout);
-    (this as any).searchTimeout = setTimeout(() => {
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
       this.performSearch(searchTerm);
     }, FindTimings.SEARCH_DEBOUNCE_MS);
   }

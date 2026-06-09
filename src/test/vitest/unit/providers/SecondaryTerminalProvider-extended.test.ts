@@ -180,6 +180,7 @@ describe('SecondaryTerminalProvider Extended', () => {
     it('should setup message listeners', () => {
       mockWebview.onDidReceiveMessage.mockReturnValue({ dispose: vi.fn() });
 
+      // eslint-disable-next-line no-restricted-syntax -- mock call in a test asserting subscription behavior; no real resource to dispose
       const disposable = mockWebview.onDidReceiveMessage(() => {});
 
       expect(mockWebview.onDidReceiveMessage).toHaveBeenCalled();
@@ -456,6 +457,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       const disposeCallback = vi.fn();
       mockWebviewView.onDidDispose.mockReturnValue({ dispose: disposeCallback });
 
+      // eslint-disable-next-line no-restricted-syntax -- mock call in a test asserting subscription behavior; no real resource to dispose
       const _disposable = mockWebviewView.onDidDispose(() => {});
 
       expect(mockWebviewView.onDidDispose).toHaveBeenCalled();
@@ -560,6 +562,7 @@ describe('SecondaryTerminalProvider Extended', () => {
       const visibilityCallback = vi.fn();
       mockWebviewView.onDidChangeVisibility.mockReturnValue({ dispose: vi.fn() });
 
+      // eslint-disable-next-line no-restricted-syntax -- mock call in a test asserting subscription behavior; no real resource to dispose
       const disposable = mockWebviewView.onDidChangeVisibility(visibilityCallback);
 
       expect(mockWebviewView.onDidChangeVisibility).toHaveBeenCalled();

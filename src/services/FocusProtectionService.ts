@@ -66,6 +66,7 @@ export class FocusProtectionService implements vscode.Disposable {
     this._enabled = this._readSetting();
 
     this._disposables.add(
+      // eslint-disable-next-line no-restricted-syntax -- subscription is tracked in _disposables (DisposableStore) and released in dispose()
       vscode.window.onDidChangeActiveTerminal((terminal) => {
         this._onActiveTerminalChanged(terminal);
       })
@@ -75,6 +76,7 @@ export class FocusProtectionService implements vscode.Disposable {
     // correlate which extension created a terminal just before an
     // onDidChangeActiveTerminal event steals focus from the sidebar.
     this._disposables.add(
+      // eslint-disable-next-line no-restricted-syntax -- subscription is tracked in _disposables (DisposableStore) and released in dispose()
       vscode.window.onDidOpenTerminal((terminal) => {
         if (!isDebugEnabled()) return;
         log('🔍 [FOCUS_PROTECTION] onDidOpenTerminal fired:', this._describeTerminal(terminal));
@@ -82,6 +84,7 @@ export class FocusProtectionService implements vscode.Disposable {
     );
 
     this._disposables.add(
+      // eslint-disable-next-line no-restricted-syntax -- subscription is tracked in _disposables (DisposableStore) and released in dispose()
       vscode.workspace.onDidChangeConfiguration((e) => {
         if (e.affectsConfiguration('secondaryTerminal.focusProtection')) {
           this._enabled = this._readSetting();

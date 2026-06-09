@@ -669,8 +669,11 @@ export function setupJSDOMEnvironment(htmlContent?: string): {
 
   // Element.closest ポリフィル (JSDOMで不足する場合)
   if (window.Element && !window.Element.prototype.closest) {
-    window.Element.prototype.closest = function (selector: string): Element | null {
-      let element: Element | null = this;
+    window.Element.prototype.closest = function (this: Element, selector: string): Element | null {
+      let element: Element | null = this.parentElement;
+      if (this.matches && this.matches(selector)) {
+        return this;
+      }
       while (element) {
         if (element.matches && element.matches(selector)) {
           return element;

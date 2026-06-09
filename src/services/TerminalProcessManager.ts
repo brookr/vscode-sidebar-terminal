@@ -100,7 +100,7 @@ export class TerminalProcessManager implements ITerminalProcessManager {
       terminal.ptyProcess &&
       typeof terminal.ptyProcess === 'object' &&
       'killed' in terminal.ptyProcess &&
-      (terminal.ptyProcess as any).killed
+      (terminal.ptyProcess as { killed?: unknown }).killed
     ) {
       return false;
     }
@@ -170,7 +170,7 @@ export class TerminalProcessManager implements ITerminalProcessManager {
       return false;
     }
 
-    if ('killed' in ptyInstance && (ptyInstance as any).killed) {
+    if ('killed' in ptyInstance && (ptyInstance as { killed?: unknown }).killed) {
       return false;
     }
 

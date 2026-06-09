@@ -41,6 +41,26 @@ export interface IProviderSessionDependencies {
   getCurrentFontSettings(): WebViewFontSettings;
 }
 
+/**
+ * Persisted terminal data returned from the persistence service.
+ */
+interface RestoredTerminalData {
+  id: string;
+  name: string;
+  cwd?: string;
+  isActive?: boolean;
+  scrollback?: string[];
+}
+
+/**
+ * Mapping between a persisted terminal and its newly created counterpart.
+ */
+interface RestoredTerminalMapping {
+  oldId: string;
+  newId: string;
+  terminalData: RestoredTerminalData;
+}
+
 export class ProviderSessionService {
   constructor(private readonly deps: IProviderSessionDependencies) {}
 
@@ -92,63 +112,18 @@ export class ProviderSessionService {
 
       log(`📦 [PERSISTENCE] Found ${sessionResult.terminals.length} terminals to restore`);
 
-      const terminalMappings: Array<{
-        oldId: string;
-        newId: string;
-        terminalData: (typeof sessionResult.terminals)[0];
-      }> = [];
+      const terminalMappings = this.createRestoredTerminals(sessionResult.terminals);
 
-      const restoredTerminals: string[] = [];
-      for (const terminalData of sessionResult.terminals) {
-        try {
-          const newTerminalId = this.deps.createTerminal();
-          restoredTerminals.push(newTerminalId);
-          terminalMappings.push({
-            oldId: terminalData.id,
-            newId: newTerminalId,
-            terminalData,
-          });
-          log(`✅ [PERSISTENCE] Restored terminal: ${terminalData.name} (${newTerminalId})`);
-        } catch (error) {
-          log(`❌ [PERSISTENCE] Failed to restore terminal ${terminalData.name}:`, error);
-        }
-      }
-
-      if (restoredTerminals.length > 0) {
+      if (terminalMappings.length > 0) {
         const fontSettings = this.deps.getCurrentFontSettings();
 
-        // Send terminal creation notifications
-        for (const mapping of terminalMappings) {
-          await this.deps.sendMessage({
-            command: 'terminalCreated',
-            terminal: {
-              id: mapping.newId,
-              name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
-              cwd: mapping.terminalData.cwd || safeProcessCwd(),
-              isActive: mapping.terminalData.isActive || false,
-            },
-            fontSettings,
-          });
-        }
+        await this.notifyTerminalsCreated(terminalMappings, fontSettings);
 
         await new Promise((resolve) => setTimeout(resolve, TIMING_CONSTANTS.WEBVIEW_INIT_DELAY_MS));
 
-        // Restore scrollback
-        for (const mapping of terminalMappings) {
-          if (
-            mapping.terminalData.scrollback &&
-            Array.isArray(mapping.terminalData.scrollback) &&
-            mapping.terminalData.scrollback.length > 0
-          ) {
-            await this.deps.sendMessage({
-              command: 'restoreScrollback',
-              terminalId: mapping.newId,
-              scrollback: mapping.terminalData.scrollback,
-            });
-          }
-        }
+        await this.restoreScrollbacks(terminalMappings);
 
-        log(`✅ [PERSISTENCE] Restored ${restoredTerminals.length} terminals`);
+        log(`✅ [PERSISTENCE] Restored ${terminalMappings.length} terminals`);
         return true;
       }
 
@@ -156,6 +131,69 @@ export class ProviderSessionService {
     } catch (error) {
       log(`❌ [PERSISTENCE] Restore session error: ${error}`);
       return false;
+    }
+  }
+
+  /**
+   * Create new terminals for each persisted terminal and build the id mapping.
+   */
+  private createRestoredTerminals(terminals: RestoredTerminalData[]): RestoredTerminalMapping[] {
+    const terminalMappings: RestoredTerminalMapping[] = [];
+
+    for (const terminalData of terminals) {
+      try {
+        const newTerminalId = this.deps.createTerminal();
+        terminalMappings.push({
+          oldId: terminalData.id,
+          newId: newTerminalId,
+          terminalData,
+        });
+        log(`✅ [PERSISTENCE] Restored terminal: ${terminalData.name} (${newTerminalId})`);
+      } catch (error) {
+        log(`❌ [PERSISTENCE] Failed to restore terminal ${terminalData.name}:`, error);
+      }
+    }
+
+    return terminalMappings;
+  }
+
+  /**
+   * Send terminal creation notifications to the WebView.
+   */
+  private async notifyTerminalsCreated(
+    terminalMappings: RestoredTerminalMapping[],
+    fontSettings: WebViewFontSettings
+  ): Promise<void> {
+    for (const mapping of terminalMappings) {
+      await this.deps.sendMessage({
+        command: 'terminalCreated',
+        terminal: {
+          id: mapping.newId,
+          name: mapping.terminalData.name || `Terminal ${mapping.newId}`,
+          cwd: mapping.terminalData.cwd || safeProcessCwd(),
+          isActive: mapping.terminalData.isActive || false,
+        },
+        fontSettings,
+      });
+    }
+  }
+
+  /**
+   * Restore scrollback content for each restored terminal.
+   */
+  private async restoreScrollbacks(terminalMappings: RestoredTerminalMapping[]): Promise<void> {
+    for (const mapping of terminalMappings) {
+      if (
+        mapping.terminalData.scrollback &&
+        Array.isArray(mapping.terminalData.scrollback) &&
+        mapping.terminalData.scrollback.length > 0
+      ) {
+        await this.deps.sendMessage({
+          command: 'restoreScrollback',
+          terminalId: mapping.newId,
+          scrollback: mapping.terminalData.scrollback,
+        });
+      }
     }
   }
 }

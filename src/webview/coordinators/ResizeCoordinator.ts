@@ -40,6 +40,7 @@ export class ResizeCoordinator {
   private bodyResizeObserver: ResizeObserver | null = null;
   private isInitialized = false;
   private readonly boundWindowResizeHandler: () => void;
+  private readonly boundPanelLocationChangedHandler: () => void;
 
   // Use Debouncer utility for consistent debouncing
   private readonly parentResizeDebouncer: Debouncer;
@@ -48,6 +49,10 @@ export class ResizeCoordinator {
 
   constructor(private readonly deps: IResizeDependencies) {
     this.boundWindowResizeHandler = () => this.windowResizeDebouncer.trigger();
+    this.boundPanelLocationChangedHandler = () => {
+      log('📍 Panel location changed event received - refitting all terminals');
+      this.refitAllTerminals();
+    };
 
     // Initialize debouncers with appropriate delays
     this.parentResizeDebouncer = new Debouncer(
@@ -129,6 +134,7 @@ export class ResizeCoordinator {
    * ウィンドウリサイズリスナーを設定
    */
   private setupWindowResizeListener(): void {
+    // eslint-disable-next-line no-restricted-syntax -- boundWindowResizeHandler stored on instance and removed via removeEventListener in dispose()
     window.addEventListener('resize', this.boundWindowResizeHandler);
     log('🔍 Window resize listener added');
   }
@@ -209,10 +215,11 @@ export class ResizeCoordinator {
    * パネル位置変更イベントリスナーを設定
    */
   public setupPanelLocationListener(): void {
-    window.addEventListener('terminal-panel-location-changed', () => {
-      log('📍 Panel location changed event received - refitting all terminals');
-      this.refitAllTerminals();
-    });
+    // eslint-disable-next-line no-restricted-syntax -- boundPanelLocationChangedHandler stored on instance and removed via removeEventListener in dispose()
+    window.addEventListener(
+      'terminal-panel-location-changed',
+      this.boundPanelLocationChangedHandler
+    );
     log('🔍 Panel location change listener added');
   }
 
@@ -232,6 +239,12 @@ export class ResizeCoordinator {
 
     // Remove window resize listener
     window.removeEventListener('resize', this.boundWindowResizeHandler);
+
+    // Remove panel location change listener
+    window.removeEventListener(
+      'terminal-panel-location-changed',
+      this.boundPanelLocationChangedHandler
+    );
 
     // Dispose debouncers (cancels pending operations and cleans up timers)
     this.parentResizeDebouncer.dispose();

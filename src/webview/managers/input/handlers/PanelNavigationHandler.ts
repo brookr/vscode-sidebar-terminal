@@ -126,17 +126,7 @@ export class PanelNavigationHandler {
     } else if (NEXT_NAVIGATION_KEYS.has(normalizedKey)) {
       interactionType = 'switch-next';
     } else if (PANEL_ACTION_KEYS.has(normalizedKey)) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.deps.logger(`Panel navigation ${PANEL_ACTION_KEYS.get(normalizedKey)}: ${event.key}`);
-
-      if (normalizedKey === 'r' || normalizedKey === 'd') {
-        this.deps.emitTerminalInteractionEvent('create-terminal', '', undefined);
-      } else if (normalizedKey === 'x') {
-        const activeTerminalId = this.resolveNavigationTerminalId();
-        this.deps.emitTerminalInteractionEvent('kill-terminal', activeTerminalId || '', undefined);
-      }
-
+      this.handlePanelActionKey(event, normalizedKey);
       return true;
     } else {
       // Block non-navigation keys from reaching the terminal while in panel navigation mode
@@ -157,6 +147,22 @@ export class PanelNavigationHandler {
     }
 
     return true;
+  }
+
+  /**
+   * Handle a panel action key (create/kill terminal) while in panel navigation mode.
+   */
+  private handlePanelActionKey(event: KeyboardEvent, normalizedKey: string): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.deps.logger(`Panel navigation ${PANEL_ACTION_KEYS.get(normalizedKey)}: ${event.key}`);
+
+    if (normalizedKey === 'r' || normalizedKey === 'd') {
+      this.deps.emitTerminalInteractionEvent('create-terminal', '', undefined);
+    } else if (normalizedKey === 'x') {
+      const activeTerminalId = this.resolveNavigationTerminalId();
+      this.deps.emitTerminalInteractionEvent('kill-terminal', activeTerminalId || '', undefined);
+    }
   }
 
   /**

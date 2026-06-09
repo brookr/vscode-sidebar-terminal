@@ -96,7 +96,11 @@ describe('ScrollbackManager', () => {
       };
 
       const line1 = mockBuffer.getLine(1);
-      const full = manager.getFullBufferLine(line1 as any, 1, mockBuffer);
+      const full = manager.getFullBufferLine(
+        line1 as any,
+        1,
+        mockBuffer as unknown as Parameters<ScrollbackManager['getFullBufferLine']>[2]
+      );
 
       expect(full).toBe('part1part2');
     });
@@ -106,7 +110,10 @@ describe('ScrollbackManager', () => {
         getLine: vi.fn().mockImplementation((i) => ({ id: i })),
       };
 
-      const iterator = manager.getBufferReverseIterator(mockBuffer, 2);
+      const iterator = manager.getBufferReverseIterator(
+        mockBuffer as unknown as Parameters<ScrollbackManager['getBufferReverseIterator']>[0],
+        2
+      );
       const results = Array.from(iterator);
 
       expect(results).toHaveLength(3);

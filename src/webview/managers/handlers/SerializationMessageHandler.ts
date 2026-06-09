@@ -33,6 +33,31 @@ type CommandHandler = (
 ) => void | Promise<void>;
 
 /**
+ * Optional persistence manager surface accessed dynamically off the coordinator.
+ * These members are not part of IManagerCoordinator but may be present at runtime.
+ */
+interface PersistenceManagerLike {
+  restoreTerminalContent(terminalId: string, content: string): boolean;
+  getAvailableTerminals?: () => string[];
+  saveTerminalContent(terminalId: string): void;
+}
+
+/**
+ * Optional session-restore surface accessed dynamically off the coordinator.
+ */
+type RestoreSessionFn = (payload: {
+  terminalId: string;
+  terminalName: string;
+  scrollbackData?: string[];
+  sessionRestoreMessage?: string;
+}) => Promise<boolean>;
+
+interface CoordinatorDynamicSurface {
+  persistenceManager?: PersistenceManagerLike;
+  restoreSession?: RestoreSessionFn;
+}
+
+/**
  * Serialization Message Handler
  *
  * Responsibilities:
@@ -116,7 +141,7 @@ export class SerializationMessageHandler implements IMessageHandler {
       terminalIds.push(msg.terminalId);
     }
 
-    const additionalIds = (msg as any).terminalIds;
+    const additionalIds = msg.terminalIds;
     if (Array.isArray(additionalIds)) {
       additionalIds
         .filter((id): id is string => typeof id === 'string' && id.trim().length > 0)
@@ -130,8 +155,8 @@ export class SerializationMessageHandler implements IMessageHandler {
         serializationData: {},
         error: 'missing-terminal-id',
         terminalId: msg.terminalId,
-        requestId: (msg as any).requestId,
-        messageId: (msg as any).messageId,
+        requestId: msg.requestId,
+        messageId: msg.messageId,
         timestamp: Date.now(),
       });
       return;
@@ -156,21 +181,20 @@ export class SerializationMessageHandler implements IMessageHandler {
     this.logger.info('Restore serialized content requested');
 
     const terminalId = typeof msg.terminalId === 'string' ? msg.terminalId : undefined;
-    const serializedContent = (msg as any).serializedContent as string | undefined;
-    const scrollbackData = Array.isArray((msg as any).scrollbackData)
-      ? ((msg as any).scrollbackData as unknown[]).filter(
-          (line): line is string => typeof line === 'string'
-        )
+    const serializedContent =
+      typeof msg.serializedContent === 'string' ? msg.serializedContent : undefined;
+    const scrollbackData = Array.isArray(msg.scrollbackData)
+      ? (msg.scrollbackData as unknown[]).filter((line): line is string => typeof line === 'string')
       : undefined;
     const sessionRestoreMessage =
-      typeof (msg as any).sessionRestoreMessage === 'string'
-        ? ((msg as any).sessionRestoreMessage as string)
-        : typeof (msg as any).resumeMessage === 'string'
-          ? ((msg as any).resumeMessage as string)
+      typeof msg.sessionRestoreMessage === 'string'
+        ? msg.sessionRestoreMessage
+        : typeof msg.resumeMessage === 'string'
+          ? msg.resumeMessage
           : undefined;
-    const isActive = Boolean((msg as any).isActive);
-    const requestId = (msg as any).requestId;
-    const messageId = (msg as any).messageId;
+    const isActive = Boolean(msg.isActive);
+    const requestId = msg.requestId;
+    const messageId = msg.messageId;
 
     if (!terminalId) {
       this.logger.error('Restore serialized content request missing terminalId');
@@ -186,15 +210,11 @@ export class SerializationMessageHandler implements IMessageHandler {
       return;
     }
 
-    const persistenceManager = (coordinator as any).persistenceManager;
+    const dynamicCoordinator = coordinator as unknown as CoordinatorDynamicSurface;
+    const persistenceManager = dynamicCoordinator.persistenceManager;
     const restoreSessionFn =
-      'restoreSession' in coordinator && typeof (coordinator as any).restoreSession === 'function'
-        ? ((coordinator as any).restoreSession as (payload: {
-            terminalId: string;
-            terminalName: string;
-            scrollbackData?: string[];
-            sessionRestoreMessage?: string;
-          }) => Promise<boolean>)
+      'restoreSession' in coordinator && typeof dynamicCoordinator.restoreSession === 'function'
+        ? dynamicCoordinator.restoreSession
         : undefined;
 
     void (async () => {
@@ -252,14 +272,11 @@ export class SerializationMessageHandler implements IMessageHandler {
   private handleTerminalRestoreInfo(msg: MessageCommand, _coordinator: IManagerCoordinator): void {
     this.logger.info('Terminal restore info received');
 
-    const terminals = Array.isArray((msg as any).terminals)
-      ? ((msg as any).terminals as Array<Record<string, unknown>>)
+    const terminals = Array.isArray(msg.terminals)
+      ? (msg.terminals as Array<Record<string, unknown>>)
       : [];
-    const activeTerminalId =
-      typeof (msg as any).activeTerminalId === 'string'
-        ? ((msg as any).activeTerminalId as string)
-        : null;
-    const config = (msg as any).config;
+    const activeTerminalId = typeof msg.activeTerminalId === 'string' ? msg.activeTerminalId : null;
+    const config = msg.config;
 
     this.cachedTerminalRestoreInfo = {
       terminals,
@@ -280,9 +297,10 @@ export class SerializationMessageHandler implements IMessageHandler {
   ): void {
     this.logger.info('Save all terminal sessions requested');
 
-    const persistenceManager = (coordinator as any).persistenceManager;
-    const requestId = (msg as any).requestId;
-    const messageId = (msg as any).messageId;
+    const dynamicCoordinator = coordinator as unknown as CoordinatorDynamicSurface;
+    const persistenceManager = dynamicCoordinator.persistenceManager;
+    const requestId = msg.requestId;
+    const messageId = msg.messageId;
 
     if (!persistenceManager) {
       this.logger.error('StandardTerminalPersistenceManager not available for save request');
@@ -352,14 +370,12 @@ export class SerializationMessageHandler implements IMessageHandler {
     this.logger.info('Request terminal serialization');
 
     try {
-      const terminalIds = Array.isArray((msg as any).terminalIds)
-        ? ((msg as any).terminalIds as string[])
-        : [];
+      const terminalIds = Array.isArray(msg.terminalIds) ? (msg.terminalIds as string[]) : [];
       const scrollbackLines =
-        (msg as any).scrollbackLines || SerializationConfig.DEFAULT_SCROLLBACK_LINES;
+        (msg.scrollbackLines as number | undefined) || SerializationConfig.DEFAULT_SCROLLBACK_LINES;
       const serializationData: Record<string, string> = {};
-      const requestId = (msg as any).requestId;
-      const messageId = (msg as any).messageId;
+      const requestId = msg.requestId;
+      const messageId = msg.messageId;
 
       if (terminalIds.length === 0) {
         coordinator.postMessageToExtension({
@@ -446,8 +462,8 @@ export class SerializationMessageHandler implements IMessageHandler {
         command: 'terminalSerializationResponse',
         serializationData: {},
         error: error instanceof Error ? error.message : String(error),
-        requestId: (msg as any).requestId,
-        messageId: (msg as any).messageId,
+        requestId: msg.requestId,
+        messageId: msg.messageId,
         timestamp: Date.now(),
       });
     }
@@ -463,12 +479,16 @@ export class SerializationMessageHandler implements IMessageHandler {
     this.logger.info('[RESTORE-DEBUG] === Restore terminal serialization START ===');
 
     try {
-      const terminalData = (msg as any).terminalData || [];
+      const terminalData = (Array.isArray(msg.terminalData) ? msg.terminalData : []) as Array<{
+        id: string;
+        serializedContent?: string;
+        isActive?: boolean;
+      }>;
       this.logger.info(`[RESTORE-DEBUG] Received ${terminalData.length} terminals to restore`);
       let restoredCount = 0;
 
       // Restore serialized content to each terminal
-      terminalData.forEach((terminal: any, index: number) => {
+      terminalData.forEach((terminal, index: number) => {
         const { id, serializedContent, isActive } = terminal;
         this.logger.info(
           `[RESTORE-DEBUG] Processing terminal ${index + 1}/${terminalData.length}: ${id}`
@@ -502,7 +522,7 @@ export class SerializationMessageHandler implements IMessageHandler {
             this.logger.info(
               `[RESTORE-DEBUG] Writing ${scrollbackLines.length} lines to terminal ${id}...`
             );
-            scrollbackLines.forEach((line: any) => {
+            scrollbackLines.forEach((line) => {
               terminalInstance.terminal.writeln(line.content);
             });
             this.logger.info(`[RESTORE-DEBUG] Finished writing to terminal ${id}`);
@@ -530,8 +550,8 @@ export class SerializationMessageHandler implements IMessageHandler {
         command: 'terminalSerializationRestoreResponse',
         restoredCount: restoredCount,
         totalCount: terminalData.length,
-        requestId: (msg as any).requestId,
-        messageId: (msg as any).messageId,
+        requestId: msg.requestId,
+        messageId: msg.messageId,
         timestamp: Date.now(),
       });
 
@@ -547,8 +567,8 @@ export class SerializationMessageHandler implements IMessageHandler {
         restoredCount: 0,
         totalCount: 0,
         error: error instanceof Error ? error.message : String(error),
-        requestId: (msg as any).requestId,
-        messageId: (msg as any).messageId,
+        requestId: msg.requestId,
+        messageId: msg.messageId,
         timestamp: Date.now(),
       });
     }

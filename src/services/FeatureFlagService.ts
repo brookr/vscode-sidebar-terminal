@@ -54,13 +54,13 @@ export class FeatureFlagService implements vscode.Disposable {
 
   constructor() {
     // Listen for configuration changes and invalidate cache
-    this._disposables.add(
-      vscode.workspace.onDidChangeConfiguration((e) => {
-        if (e.affectsConfiguration(FEATURE_FLAG_SECTION)) {
-          this.invalidateCache();
-        }
-      })
-    );
+    // eslint-disable-next-line no-restricted-syntax -- disposable is stored in this._disposables (DisposableStore) and released in dispose()
+    const configChangeDisposable = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration(FEATURE_FLAG_SECTION)) {
+        this.invalidateCache();
+      }
+    });
+    this._disposables.add(configChangeDisposable);
   }
 
   /**

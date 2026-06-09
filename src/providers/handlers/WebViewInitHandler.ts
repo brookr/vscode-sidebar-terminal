@@ -108,7 +108,7 @@ export class WebViewInitHandler {
     // Send extensionReady
     log('🤝 [HANDSHAKE] Sending extensionReady in response to webviewReady');
     void this.deps.sendMessage({
-      command: 'extensionReady' as any,
+      command: 'extensionReady' as WebviewMessage['command'],
       timestamp: Date.now(),
     });
     log('✅ [HANDSHAKE] extensionReady sent to WebView');

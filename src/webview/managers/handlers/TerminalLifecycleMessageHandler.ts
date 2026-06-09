@@ -177,108 +177,160 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
   ): Promise<void> {
     // 🔧 FIX: Support both msg.terminalId and msg.terminal.id formats
     // Extension sends terminal: { id, name, ... } but handler expected terminalId
-    const terminal = (msg as any).terminal;
+    const terminal = msg.terminal as
+      | {
+          id?: string;
+          name?: string;
+          isActive?: boolean;
+          indicatorColor?: string;
+        }
+      | undefined;
     const terminalId = (msg.terminalId as string) || terminal?.id;
     const terminalName = (msg.terminalName as string) || terminal?.name;
     const terminalNumber = msg.terminalNumber as number;
     const config = msg.config;
     const isActive = terminal?.isActive ?? false;
 
-    if (terminalId && terminalName) {
-      this.logger.info(
-        `🔍 TERMINAL_CREATED message received: ${terminalId} (${terminalName}) #${terminalNumber || 'unknown'}${isActive ? ' [ACTIVE]' : ''}`
-      );
-      this.logger.info(
-        `🔍 Current terminal count before creation: ${coordinator.getAllTerminalInstances().size}`
-      );
-
-      const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
-        ?.displayModeOverride;
-
-      if (displayModeOverride === 'normal') {
-        if ('setForceNormalModeForNextCreate' in coordinator) {
-          (
-            coordinator as unknown as {
-              setForceNormalModeForNextCreate: (enabled: boolean) => void;
-            }
-          ).setForceNormalModeForNextCreate(true);
-        }
-        coordinator.getDisplayModeManager?.()?.setDisplayMode('normal');
-      } else if (displayModeOverride === 'fullscreen') {
-        if ('setForceFullscreenModeForNextCreate' in coordinator) {
-          (
-            coordinator as unknown as {
-              setForceFullscreenModeForNextCreate: (enabled: boolean) => void;
-            }
-          ).setForceFullscreenModeForNextCreate(true);
-        }
-      }
-
-      // 🔧 FIX: Include isActive in config so container is created with correct initial styling
-      const indicatorColor = terminal?.indicatorColor;
-      const configWithActive = config
-        ? { ...config, isActive, ...(indicatorColor ? { indicatorColor } : {}) }
-        : { isActive, ...(indicatorColor ? { indicatorColor } : {}) };
-
-      const result = await coordinator.createTerminal(
-        terminalId,
-        terminalName,
-        configWithActive,
-        terminalNumber,
-        'extension'
-      );
-
-      this.logger.info(`🔍 Terminal creation result: ${result ? 'SUCCESS' : 'FAILED'}`);
-      this.logger.info(
-        `🔍 Current terminal count after creation: ${coordinator.getAllTerminalInstances().size}`
-      );
-
-      this.logger.debug('createTerminal result', {
-        terminalId,
-        terminalName,
-        terminalNumber,
-        success: !!result,
-        isActive,
-        existingTerminals: Array.from(coordinator.getAllTerminalInstances().keys()),
-      });
-
-      this.outputGates.set(terminalId, { enabled: false, buffer: [] });
-
-      if (result) {
-        this.scheduleInitializationAck(terminalId, coordinator);
-
-        // 🎯 FIX: Activate terminal if Extension marked it as active
-        if (isActive) {
-          this.logger.info(`🎯 Activating terminal as requested by Extension: ${terminalId}`);
-          coordinator.setActiveTerminalId(terminalId);
-        }
-
-        if (displayModeOverride === 'fullscreen') {
-          // Ensure the new terminal is active before switching to fullscreen
-          coordinator.setActiveTerminalId(terminalId);
-          const displayModeManager = coordinator.getDisplayModeManager?.();
-          // 🔧 CRITICAL FIX: Increase delay to ensure DOM operations complete
-          // The createTerminal() has internal setTimeout(150) that was overriding fullscreen
-          // Use 200ms to ensure fullscreen is applied AFTER all createTerminal() side effects
-          setTimeout(() => {
-            this.logger.info(
-              `🔍 [FULLSCREEN-DEBUG] Applying fullscreen for ${terminalId} after delay`
-            );
-            displayModeManager?.showTerminalFullscreen?.(terminalId);
-          }, 200);
-        }
-      } else {
-        this.logger.warn(
-          `⚠️ [HANDSHAKE] Terminal ${terminalId} creation reported failure; skipping initialization ack`
-        );
-      }
-    } else {
+    if (!terminalId || !terminalName) {
       this.logger.error('Invalid terminalCreated message', {
         hasTerminalId: !!terminalId,
         hasTerminalName: !!terminalName,
         hasTerminalNumber: !!terminalNumber,
         hasConfig: !!config,
       });
+      return;
+    }
+
+    await this.createTerminalFromMessage(
+      terminalId,
+      terminalName,
+      terminalNumber,
+      config,
+      terminal?.indicatorColor,
+      isActive,
+      coordinator
+    );
+  }
+
+  /**
+   * Create a terminal from a validated terminalCreated message and run side-effects.
+   */
+  private async createTerminalFromMessage(
+    terminalId: string,
+    terminalName: string,
+    terminalNumber: number,
+    config: MessageCommand['config'],
+    indicatorColor: string | undefined,
+    isActive: boolean,
+    coordinator: IManagerCoordinator
+  ): Promise<void> {
+    this.logger.info(
+      `🔍 TERMINAL_CREATED message received: ${terminalId} (${terminalName}) #${terminalNumber || 'unknown'}${isActive ? ' [ACTIVE]' : ''}`
+    );
+    this.logger.info(
+      `🔍 Current terminal count before creation: ${coordinator.getAllTerminalInstances().size}`
+    );
+
+    const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
+      ?.displayModeOverride;
+
+    this.applyDisplayModeOverride(displayModeOverride, coordinator);
+
+    // 🔧 FIX: Include isActive in config so container is created with correct initial styling
+    const configWithActive = config
+      ? { ...config, isActive, ...(indicatorColor ? { indicatorColor } : {}) }
+      : { isActive, ...(indicatorColor ? { indicatorColor } : {}) };
+
+    const result = await coordinator.createTerminal(
+      terminalId,
+      terminalName,
+      configWithActive,
+      terminalNumber,
+      'extension'
+    );
+
+    this.logger.info(`🔍 Terminal creation result: ${result ? 'SUCCESS' : 'FAILED'}`);
+    this.logger.info(
+      `🔍 Current terminal count after creation: ${coordinator.getAllTerminalInstances().size}`
+    );
+
+    this.logger.debug('createTerminal result', {
+      terminalId,
+      terminalName,
+      terminalNumber,
+      success: !!result,
+      isActive,
+      existingTerminals: Array.from(coordinator.getAllTerminalInstances().keys()),
+    });
+
+    this.outputGates.set(terminalId, { enabled: false, buffer: [] });
+
+    this.finalizeTerminalCreation(!!result, terminalId, isActive, displayModeOverride, coordinator);
+  }
+
+  /**
+   * Apply a requested display-mode override before terminal creation.
+   */
+  private applyDisplayModeOverride(
+    displayModeOverride: string | undefined,
+    coordinator: IManagerCoordinator
+  ): void {
+    if (displayModeOverride === 'normal') {
+      if ('setForceNormalModeForNextCreate' in coordinator) {
+        (
+          coordinator as unknown as {
+            setForceNormalModeForNextCreate: (enabled: boolean) => void;
+          }
+        ).setForceNormalModeForNextCreate(true);
+      }
+      coordinator.getDisplayModeManager?.()?.setDisplayMode('normal');
+    } else if (displayModeOverride === 'fullscreen') {
+      if ('setForceFullscreenModeForNextCreate' in coordinator) {
+        (
+          coordinator as unknown as {
+            setForceFullscreenModeForNextCreate: (enabled: boolean) => void;
+          }
+        ).setForceFullscreenModeForNextCreate(true);
+      }
+    }
+  }
+
+  /**
+   * Run post-creation side-effects (ack scheduling, activation, fullscreen).
+   */
+  private finalizeTerminalCreation(
+    succeeded: boolean,
+    terminalId: string,
+    isActive: boolean,
+    displayModeOverride: string | undefined,
+    coordinator: IManagerCoordinator
+  ): void {
+    if (!succeeded) {
+      this.logger.warn(
+        `⚠️ [HANDSHAKE] Terminal ${terminalId} creation reported failure; skipping initialization ack`
+      );
+      return;
+    }
+
+    this.scheduleInitializationAck(terminalId, coordinator);
+
+    // 🎯 FIX: Activate terminal if Extension marked it as active
+    if (isActive) {
+      this.logger.info(`🎯 Activating terminal as requested by Extension: ${terminalId}`);
+      coordinator.setActiveTerminalId(terminalId);
+    }
+
+    if (displayModeOverride === 'fullscreen') {
+      // Ensure the new terminal is active before switching to fullscreen
+      coordinator.setActiveTerminalId(terminalId);
+      const displayModeManager = coordinator.getDisplayModeManager?.();
+      // 🔧 CRITICAL FIX: Increase delay to ensure DOM operations complete
+      // The createTerminal() has internal setTimeout(150) that was overriding fullscreen
+      // Use 200ms to ensure fullscreen is applied AFTER all createTerminal() side effects
+      setTimeout(() => {
+        this.logger.info(`🔍 [FULLSCREEN-DEBUG] Applying fullscreen for ${terminalId} after delay`);
+        displayModeManager?.showTerminalFullscreen?.(terminalId);
+      }, 200);
     }
   }
 

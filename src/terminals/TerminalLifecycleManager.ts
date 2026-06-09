@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { TerminalInstance, DeleteResult, ProcessState } from '../types/shared';
+import { TerminalInstance, DeleteResult, ProcessState, TerminalEvent } from '../types/shared';
 import { ERROR_MESSAGES } from '../constants';
 import {
   getTerminalConfig,
@@ -27,7 +27,7 @@ export class TerminalLifecycleManager {
     private readonly _cliAgentService: ICliAgentDetectionService,
     private readonly _terminalCreatedEmitter: vscode.EventEmitter<TerminalInstance>,
     private readonly _terminalRemovedEmitter: vscode.EventEmitter<string>,
-    private readonly _exitEmitter: vscode.EventEmitter<any>,
+    private readonly _exitEmitter: vscode.EventEmitter<TerminalEvent>,
     private readonly _setupEventsCallback: (terminal: TerminalInstance) => void,
     private readonly _notifyStateUpdateCallback: () => void,
     private readonly _cleanupTerminalDataCallback: (terminalId: string) => void

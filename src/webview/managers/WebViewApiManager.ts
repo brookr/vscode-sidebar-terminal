@@ -51,7 +51,9 @@ export class WebViewApiManager {
         log('✅ VS Code API initialized successfully');
       } else {
         // グローバルオブジェクトからの取得を試行
-        const globalApi = (window as any).acquireVsCodeApi?.();
+        const globalApi = (
+          window as Window & { acquireVsCodeApi?: () => VSCodeAPI }
+        ).acquireVsCodeApi?.();
         if (globalApi) {
           this.vscodeApi = globalApi;
           this.isInitialized = true;
@@ -91,7 +93,7 @@ export class WebViewApiManager {
       log('🔍 [DEBUG] WebViewApiManager.postMessageToExtension called with:', {
         message,
         messageType: typeof message,
-        command: (message as any)?.command,
+        command: (message as { command?: string } | null | undefined)?.command,
         hasApi: !!this.vscodeApi,
         isInitialized: this.isInitialized,
         timestamp: Date.now(),
@@ -108,7 +110,11 @@ export class WebViewApiManager {
       api.postMessage(message as VsCodeMessage);
       log('🔍 [DEBUG] api.postMessage called successfully');
 
-      log(`📤 Message sent to extension: ${(message as any)?.command || 'unknown'}`);
+      log(
+        `📤 Message sent to extension: ${
+          (message as { command?: string } | null | undefined)?.command || 'unknown'
+        }`
+      );
       return true;
     } catch (error) {
       log('❌ ERROR: Failed to send message to extension:', error);

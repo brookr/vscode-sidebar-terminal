@@ -165,8 +165,7 @@ describe('TerminalSpawner', () => {
     it('should filter duplicate shells in candidates', () => {
       // Mock process.cwd to match defaultRequest.cwd so we only have 1 candidate CWD
       const originalCwd = process.cwd;
-      // @ts-ignore
-      process.cwd = vi.fn().mockReturnValue(defaultRequest.cwd);
+      process.cwd = vi.fn().mockReturnValue(defaultRequest.cwd) as typeof process.cwd;
 
       // If requested shell is same as fallback, shouldn't try twice
       const request = { ...defaultRequest, shell: '/bin/bash' }; // bash is also a fallback
@@ -194,8 +193,7 @@ describe('TerminalSpawner', () => {
       const originalCwd = process.cwd;
       const mockCwd = '/process/cwd';
 
-      // @ts-ignore
-      process.cwd = vi.fn().mockReturnValue(mockCwd);
+      process.cwd = vi.fn().mockReturnValue(mockCwd) as typeof process.cwd;
 
       // Make requested cwd invalid
       vi.mocked(fs.statSync).mockImplementation((path) => {

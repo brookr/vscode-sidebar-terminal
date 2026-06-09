@@ -3,8 +3,11 @@ import { TerminalManager } from '../terminals/TerminalManager';
 import { WebviewMessage } from '../types/common';
 import { safeProcessCwd } from '../utils/common';
 import { TerminalErrorHandler } from '../utils/feedback';
-import { provider as log } from '../utils/logger';
-import { PersistenceMessageHandler } from '../handlers/PersistenceMessageHandler';
+import { provider as log, isDebugEnabled } from '../utils/logger';
+import {
+  PersistenceMessageHandler,
+  PersistenceMessage,
+} from '../handlers/PersistenceMessageHandler';
 import { TerminalInitializationCoordinator } from './TerminalInitializationCoordinator';
 // hasSettings moved to SettingsMessageHandler
 import { WebViewHtmlGenerationService } from '../services/webview/WebViewHtmlGenerationService';
@@ -206,21 +209,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       getCurrentFontSettings: () => this._settingsService.getCurrentFontSettings(),
     });
 
-    this._watchdogCoordinator = new WatchdogCoordinator(
-      {
-        getTerminal: (id) => this._terminalManager.getTerminal(id),
-        initializeShellForTerminal: (id, pty, safe) =>
-          this._terminalManager.initializeShellForTerminal(
-            id,
-            pty as import('node-pty').IPty,
-            safe
-          ),
-        telemetryService: this
-          ._telemetryService as IWatchdogCoordinatorDependencies['telemetryService'],
-      },
-      SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
-      SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
-    );
+    this._watchdogCoordinator = this._buildWatchdogCoordinator();
 
     // Initialize extracted message handlers (Phase 3A refactoring)
     this._scrollbackMessageHandler = new ScrollbackMessageHandler({
@@ -231,7 +220,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._debugMessageHandler = new DebugMessageHandler({
       isDebugEnabled: () => {
         try {
-          const { isDebugEnabled } = require('../utils/logger');
           return isDebugEnabled ? isDebugEnabled() : false;
         } catch {
           return false;
@@ -249,7 +237,48 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       sendMessage: (msg) => this._sendMessage(msg),
     });
 
-    this._webViewInitHandler = new WebViewInitHandler({
+    this._webViewInitHandler = this._buildWebViewInitHandler();
+
+    this._messageHandlerRegistrar = this._buildMessageHandlerRegistrar();
+
+    // Initialize terminal init lifecycle handler
+    this._terminalInitLifecycleHandler = this._buildTerminalInitLifecycleHandler();
+
+    log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
+    log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
+
+    this._terminalInitLifecycleHandler.registerInitializationWatchdogs();
+
+    // 🎨 Auto theme synchronization: Listen for VS Code theme changes
+    this._registerThemeChangeListener();
+  }
+
+  /**
+   * Build the prompt/ack watchdog coordinator
+   */
+  private _buildWatchdogCoordinator(): WatchdogCoordinator {
+    return new WatchdogCoordinator(
+      {
+        getTerminal: (id) => this._terminalManager.getTerminal(id),
+        initializeShellForTerminal: (id, pty, safe) =>
+          this._terminalManager.initializeShellForTerminal(
+            id,
+            pty as import('node-pty').IPty,
+            safe
+          ),
+        telemetryService: this
+          ._telemetryService as IWatchdogCoordinatorDependencies['telemetryService'],
+      },
+      SecondaryTerminalProvider.ACK_WATCHDOG_OPTIONS,
+      SecondaryTerminalProvider.PROMPT_WATCHDOG_OPTIONS
+    );
+  }
+
+  /**
+   * Build the WebView initialization handler
+   */
+  private _buildWebViewInitHandler(): WebViewInitHandler {
+    return new WebViewInitHandler({
       sendMessage: (msg) => this._communicationService.sendMessage(msg),
       sendVersionInfo: () => void this._communicationService.sendVersionInfo(),
       getCurrentSettings: () => this._settingsService.getCurrentSettings(),
@@ -261,8 +290,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       panelLocationHandlerHandleWebviewVisible: () =>
         this._panelLocationHandler.handleWebviewVisible(),
     });
+  }
 
-    this._messageHandlerRegistrar = new MessageHandlerRegistrar({
+  /**
+   * Build the message handler registrar
+   */
+  private _buildMessageHandlerRegistrar(): MessageHandlerRegistrar {
+    return new MessageHandlerRegistrar({
       handleWebviewReady: (msg) => this._handleWebviewReady(msg),
       handleWebviewInitialized: (msg) => this._handleWebviewInitialized(msg),
       handleReportPanelLocation: (msg) => this._handleReportPanelLocation(msg),
@@ -277,9 +311,13 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       debugMessageHandler: this._debugMessageHandler,
       onTerminalFocusChanged: (focused) => this._terminalManager.setTerminalFocused(focused),
     });
+  }
 
-    // Initialize terminal init lifecycle handler
-    this._terminalInitLifecycleHandler = new TerminalInitLifecycleHandler({
+  /**
+   * Build the terminal init lifecycle handler
+   */
+  private _buildTerminalInitLifecycleHandler(): TerminalInitLifecycleHandler {
+    return new TerminalInitLifecycleHandler({
       getTerminal: (id) => this._terminalManager.getTerminal(id),
       getTerminals: () => this._terminalManager.getTerminals(),
       getActiveTerminalId: () => this._terminalManager.getActiveTerminalId(),
@@ -303,14 +341,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
       eventCoordinator: null, // Set later when event coordinator is initialized
       safeProcessCwd,
     });
-
-    log('🎨 [PROVIDER] NEW Facade pattern services initialized (Issue #214)');
-    log('✅ [PROVIDER] SecondaryTerminalProvider constructed with all services');
-
-    this._terminalInitLifecycleHandler.registerInitializationWatchdogs();
-
-    // 🎨 Auto theme synchronization: Listen for VS Code theme changes
-    this._registerThemeChangeListener();
   }
 
   /**
@@ -472,6 +502,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Track listener registration
     this._lifecycleManager.trackListenerRegistration();
 
+    // eslint-disable-next-line no-restricted-syntax -- disposable is tracked via _cleanupService, _webviewMessageListenerDisposable, and extensionContext.subscriptions
     const disposable = webviewView.webview.onDidReceiveMessage(
       (message: WebviewMessage) => {
         log('📨 [PROVIDER] ✅ MESSAGE RECEIVED FROM WEBVIEW!');
@@ -486,7 +517,6 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
         }
 
         try {
-          const { isDebugEnabled } = require('../utils/logger');
           if (isDebugEnabled && isDebugEnabled()) {
             log('📨 [PROVIDER] Message data:', message);
           }
@@ -576,7 +606,11 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     // Forward to persistence service for terminal ready event handling
     const terminalId = message.terminalId as string;
     if (terminalId && this._extensionPersistenceService) {
-      const handler = (this._extensionPersistenceService as any).handleTerminalReady;
+      const handler = (
+        this._extensionPersistenceService as {
+          handleTerminalReady?: (terminalId: string) => void;
+        }
+      ).handleTerminalReady;
       if (typeof handler === 'function') {
         handler.call(this._extensionPersistenceService, terminalId);
       }
@@ -675,6 +709,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     this._cleanupService.addDisposable(panelDisposable);
 
     // Settings and font changes remain as a separate listener
+    // eslint-disable-next-line no-restricted-syntax -- settingsDisposable is tracked via _cleanupService.addDisposable below
     const settingsDisposable = vscode.workspace.onDidChangeConfiguration((event) => {
       // Handle settings changes that affect WebView (delegated to SettingsMessageHandler)
       if (this._settingsMessageHandler.isSettingsChangeAffectingWebView(event)) {
@@ -856,7 +891,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     }
 
     try {
-      await this._persistenceHandler.handleMessage(message as any);
+      await this._persistenceHandler.handleMessage(message as unknown as PersistenceMessage);
     } catch (error) {
       log('❌ [PERSISTENCE] Error handling persistence message:', error);
     }
@@ -883,7 +918,7 @@ export class SecondaryTerminalProvider implements vscode.WebviewViewProvider, vs
     return this._sessionService.restoreLastSession();
   }
 
-  public getPerformanceMetrics() {
+  public getPerformanceMetrics(): ReturnType<WebViewLifecycleManager['getPerformanceMetrics']> {
     return this._lifecycleManager.getPerformanceMetrics();
   }
 

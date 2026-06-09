@@ -66,24 +66,13 @@ export class PanelLocationHandler implements IMessageHandler {
 
         // Initial detection
         if (!initialDetectionDone) {
-          const terminalsWrapper = document.getElementById('terminals-wrapper');
           // Update cached state even if terminals-wrapper isn't ready yet
           this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
           this.cachedPanelLocation = detectedLocation;
 
-          if (terminalsWrapper) {
-            // 🔧 FIX: Apply CSS class for horizontal layout (bottom panel only)
-            // Default is column (vertical/sidebar), add class for row (horizontal/panel)
-            if (detectedLocation === 'panel') {
-              terminalsWrapper.classList.add('terminal-split-horizontal');
-            } else {
-              terminalsWrapper.classList.remove('terminal-split-horizontal');
-            }
-          } else {
-            // terminals-wrapper may be created later (after terminalCreated messages)
-            // Retry once the wrapper exists so layout matches the detected location
-            this.scheduleTerminalsWrapperClassSync(detectedLocation);
-          }
+          // 🔧 FIX: Apply CSS class for horizontal layout (bottom panel only)
+          // Default is column (vertical/sidebar), add class for row (horizontal/panel)
+          this.syncHorizontalLayoutClass(detectedLocation);
 
           // Report to Extension
           void this.messageQueue.enqueue({
@@ -96,35 +85,24 @@ export class PanelLocationHandler implements IMessageHandler {
 
           // 🔧 FIX: Schedule terminal refit after initial detection
           this.scheduleTerminalRefitViaDOM(detectedLocation);
-        } else {
+        } else if (this.cachedPanelLocation !== detectedLocation) {
           // Change detection: Only update if location changed
-          if (this.cachedPanelLocation !== detectedLocation) {
-            const terminalsWrapper = document.getElementById('terminals-wrapper');
-            if (terminalsWrapper) {
-              // 🔧 FIX: Toggle CSS class for horizontal layout (bottom panel only)
-              if (detectedLocation === 'panel') {
-                terminalsWrapper.classList.add('terminal-split-horizontal');
-              } else {
-                terminalsWrapper.classList.remove('terminal-split-horizontal');
-              }
-            } else {
-              this.scheduleTerminalsWrapperClassSync(detectedLocation);
-            }
+          // 🔧 FIX: Toggle CSS class for horizontal layout (bottom panel only)
+          this.syncHorizontalLayoutClass(detectedLocation);
 
-            // Update cached state
-            this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
-            this.cachedPanelLocation = detectedLocation;
+          // Update cached state
+          this.cachedFlexDirection = detectedLocation === 'panel' ? 'row' : 'column';
+          this.cachedPanelLocation = detectedLocation;
 
-            // Report to Extension
-            void this.messageQueue.enqueue({
-              command: 'reportPanelLocation',
-              location: detectedLocation,
-              timestamp: Date.now(),
-            });
+          // Report to Extension
+          void this.messageQueue.enqueue({
+            command: 'reportPanelLocation',
+            location: detectedLocation,
+            timestamp: Date.now(),
+          });
 
-            // 🔧 FIX: Schedule terminal refit after panel location change
-            this.scheduleTerminalRefitViaDOM(detectedLocation);
-          }
+          // 🔧 FIX: Schedule terminal refit after panel location change
+          this.scheduleTerminalRefitViaDOM(detectedLocation);
         }
 
         break;
@@ -160,6 +138,26 @@ export class PanelLocationHandler implements IMessageHandler {
         this.logger.error('Failed to dispatch terminal refit event:', error);
       }
     }, WEBVIEW_TIMING.PANEL_REFIT_DELAY_MS);
+  }
+
+  /**
+   * Apply the horizontal-layout CSS class to the terminals wrapper for the
+   * given panel location, or schedule the sync if the wrapper isn't ready yet.
+   */
+  private syncHorizontalLayoutClass(detectedLocation: 'sidebar' | 'panel'): void {
+    const terminalsWrapper = document.getElementById('terminals-wrapper');
+    if (!terminalsWrapper) {
+      // terminals-wrapper may be created later (after terminalCreated messages)
+      // Retry once the wrapper exists so layout matches the detected location
+      this.scheduleTerminalsWrapperClassSync(detectedLocation);
+      return;
+    }
+
+    if (detectedLocation === 'panel') {
+      terminalsWrapper.classList.add('terminal-split-horizontal');
+    } else {
+      terminalsWrapper.classList.remove('terminal-split-horizontal');
+    }
   }
 
   private scheduleTerminalsWrapperClassSync(location: 'sidebar' | 'panel'): void {

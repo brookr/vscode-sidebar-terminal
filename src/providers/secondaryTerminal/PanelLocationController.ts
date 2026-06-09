@@ -67,6 +67,7 @@ export class PanelLocationController implements vscode.Disposable {
   public async setupPanelLocationChangeListener(webviewView: vscode.WebviewView): Promise<void> {
     await this.panelLocationService.initialize(webviewView);
 
+    // eslint-disable-next-line no-restricted-syntax -- disposable is stored and registered to extensionContext.subscriptions below for lifecycle disposal
     const disposable = vscode.workspace.onDidChangeConfiguration((event) => {
       if (
         event.affectsConfiguration('secondaryTerminal.panelLocation') ||

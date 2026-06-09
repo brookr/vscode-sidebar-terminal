@@ -321,6 +321,7 @@ export class BufferManagementService implements IBufferManagementService {
     this._stopFlushTimer(terminalId);
 
     // Start new timer
+    // eslint-disable-next-line no-restricted-syntax -- stored in state.timer and cleared in _stopFlushTimer()/dispose()
     state.timer = setInterval(() => {
       if (state.buffer.length > 0) {
         this.flush(terminalId);

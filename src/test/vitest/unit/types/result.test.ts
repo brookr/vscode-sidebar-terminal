@@ -422,6 +422,7 @@ describe('tryCatch', () => {
 
   it('should return failure for throwing function with non-Error', () => {
     const result = tryCatch(() => {
+      // eslint-disable-next-line no-throw-literal -- intentionally throwing a non-Error to verify tryCatch normalizes string throws
       throw 'string error';
     });
 

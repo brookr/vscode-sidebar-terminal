@@ -45,17 +45,17 @@ export class TerminalScrollIndicatorService {
       const isAtBottom = (): boolean =>
         viewport.scrollTop + viewport.clientHeight >= viewport.scrollHeight - threshold;
 
-      const updateVisibility = () => {
+      const updateVisibility = (): void => {
         const visible = !isAtBottom();
         indicator.classList.toggle('visible', visible);
       };
 
-      const onViewportScroll = () => updateVisibility();
+      const onViewportScroll = (): void => updateVisibility();
       viewport.addEventListener('scroll', onViewportScroll, { passive: true });
 
       const xtermScrollDisposable = terminal.onScroll(updateVisibility);
 
-      const onClick = () => {
+      const onClick = (): void => {
         try {
           terminal.scrollToBottom();
           viewport.scrollTop = viewport.scrollHeight;

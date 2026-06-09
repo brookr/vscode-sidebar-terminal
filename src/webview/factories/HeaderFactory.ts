@@ -6,6 +6,33 @@
 import { DOMUtils } from '../utils/DOMUtils';
 import { webview as log } from '../../utils/logger';
 
+/**
+ * Mutable state shared across openHeaderEditor invocations for a single header.
+ */
+interface HeaderEditorState {
+  isEditing: boolean;
+  isPaletteInteracting: boolean;
+  currentIndicatorColor: string;
+  initialIndicatorColor: string;
+  paletteFlashTimer: number | null;
+  pendingIndicatorColor: string | null;
+}
+
+/**
+ * Static dependencies/elements for the header editor.
+ */
+interface HeaderEditorContext {
+  terminalId: string;
+  container: HTMLElement;
+  titleSection: HTMLElement;
+  nameSpan: HTMLElement;
+  onRenameSubmit?: (terminalId: string, newName: string) => void;
+  onHeaderUpdate?: (
+    terminalId: string,
+    updates: { newName?: string; indicatorColor?: string }
+  ) => void;
+}
+
 export interface TerminalHeaderElements {
   container: HTMLElement;
   titleSection: HTMLElement;
@@ -78,18 +105,157 @@ export const HEADER_INDICATOR_COLOR_PALETTE = [
 
 export class HeaderFactory {
   /**
-   * 統一されたターミナルヘッダーを作成
+   * Create a header control button with the shared toolbar styling.
    */
-  public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
-    const { terminalId, terminalName, customClasses = [] } = config;
+  private static createControlButton(
+    fgColor: string,
+    attributes: Record<string, string>
+  ): HTMLButtonElement {
+    return DOMUtils.createElement(
+      'button',
+      {
+        background: 'none',
+        border: 'none',
+        color: fgColor,
+        cursor: 'pointer',
+        fontSize: '14px',
+        padding: '4px',
+        borderRadius: '3px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: '0.7',
+        transition: 'opacity 0.2s, background-color 0.2s',
+        width: '24px',
+        height: '24px',
+        minWidth: '24px',
+        minHeight: '24px',
+        boxSizing: 'border-box',
+      },
+      attributes
+    );
+  }
 
-    // Use provided colors or fall back to VS Code CSS variables
-    const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
-    const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
-    const indicatorColor = config.indicatorColor || '#00FFFF';
-    const headerEnhancementsEnabled = config.headerEnhancementsEnabled !== false;
+  /**
+   * Attach the standard hover opacity/background effect to a control button.
+   */
+  private static attachButtonHoverEffect(button: HTMLButtonElement): void {
+    button.addEventListener('mouseenter', () => {
+      button.style.opacity = '1';
+      button.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
+    });
 
-    // メインコンテナ
+    button.addEventListener('mouseleave', () => {
+      button.style.opacity = '0.7';
+      button.style.backgroundColor = 'transparent';
+    });
+  }
+
+  /**
+   * Wire up click handlers for the header controls and the header itself.
+   */
+  private static attachHeaderClickHandlers(
+    config: HeaderConfig,
+    elements: {
+      container: HTMLElement;
+      aiAgentToggleButton: HTMLButtonElement;
+      closeButton: HTMLButtonElement;
+      splitButton: HTMLButtonElement | null;
+    }
+  ): void {
+    const { terminalId } = config;
+    const { container, aiAgentToggleButton, closeButton, splitButton } = elements;
+
+    // Add AI Agent toggle button click handler
+    if (config.onAiAgentToggleClick) {
+      aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onAiAgentToggleClick!(terminalId);
+        log(`⏻ [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
+      });
+    }
+
+    // Add close button click handler with double-click protection
+    if (config.onCloseClick) {
+      let isClosing = false;
+      closeButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        event.preventDefault();
+
+        // 🔧 FIX: Prevent double-click from triggering multiple deletions
+        if (isClosing) {
+          log(`🗑️ [HeaderFactory] Close already in progress, ignoring: ${terminalId}`);
+          return;
+        }
+        isClosing = true;
+
+        log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
+        config.onCloseClick!(terminalId);
+
+        // Reset after a short delay to allow re-click if needed
+        setTimeout(() => {
+          isClosing = false;
+        }, 500);
+      });
+    }
+
+    // Add split button click handler
+    if (splitButton && config.onSplitClick) {
+      splitButton.addEventListener('click', (event: MouseEvent) => {
+        event.stopPropagation(); // Prevent header click event
+        config.onSplitClick!(terminalId);
+        log(`⊞ [HeaderFactory] Split button clicked for terminal: ${terminalId}`);
+      });
+    }
+
+    // Add header click handler for terminal activation
+    if (config.onHeaderClick) {
+      container.addEventListener('click', (event: MouseEvent) => {
+        // Prevent click if clicking on controls, rename input, or second click of double-click.
+        // Keep single-click activation behavior intact.
+        const target = event.target as HTMLElement;
+        if (target.closest('.terminal-control')) {
+          return;
+        }
+        if (target.closest('.terminal-name-edit-input')) {
+          return;
+        }
+        if (target.closest('.terminal-header-editor')) {
+          return;
+        }
+        if (event.detail >= 2) {
+          return;
+        }
+
+        config.onHeaderClick!(terminalId);
+        log(`🎯 [HeaderFactory] Header clicked, activating terminal: ${terminalId}`);
+      });
+
+      // Add visual feedback for clickable header
+      container.style.cursor = 'pointer';
+    }
+  }
+
+  /**
+   * Create the header container element with its base styling and dataset.
+   */
+  private static createHeaderContainer(params: {
+    terminalId: string;
+    customClasses: string[];
+    bgColor: string;
+    fgColor: string;
+    indicatorColor: string;
+    headerEnhancementsEnabled: boolean;
+  }): HTMLElement {
+    const {
+      terminalId,
+      customClasses,
+      bgColor,
+      fgColor,
+      indicatorColor,
+      headerEnhancementsEnabled,
+    } = params;
+
     const container = DOMUtils.createElement(
       'div',
       {
@@ -120,8 +286,13 @@ export class HeaderFactory {
     container.style.setProperty('--terminal-indicator-color', indicatorColor);
     container.dataset.headerEnhancementsEnabled = String(headerEnhancementsEnabled);
 
-    HeaderFactory.ensureProcessingIndicatorStyles();
+    return container;
+  }
 
+  /**
+   * Create the processing indicator element (animated progress bar) with its flow child.
+   */
+  private static createProcessingIndicator(): HTMLElement {
     const processingIndicator = DOMUtils.createElement(
       'div',
       {
@@ -156,6 +327,22 @@ export class HeaderFactory {
     );
     processingIndicator.appendChild(processingIndicatorFlow);
 
+    return processingIndicator;
+  }
+
+  /**
+   * Create the title/name/id/status/controls sections of the header.
+   */
+  private static createHeaderSections(
+    terminalName: string,
+    fgColor: string
+  ): {
+    titleSection: HTMLElement;
+    nameSpan: HTMLElement;
+    idSpan: HTMLElement;
+    statusSection: HTMLElement;
+    controlsSection: HTMLElement;
+  } {
     // タイトルセクション
     const titleSection = DOMUtils.createElement(
       'div',
@@ -230,201 +417,79 @@ export class HeaderFactory {
       }
     );
 
+    return { titleSection, nameSpan, idSpan, statusSection, controlsSection };
+  }
+
+  /**
+   * 統一されたターミナルヘッダーを作成
+   */
+  public static createTerminalHeader(config: HeaderConfig): TerminalHeaderElements {
+    const { terminalId, terminalName, customClasses = [] } = config;
+
+    // Use provided colors or fall back to VS Code CSS variables
+    const bgColor = config.backgroundColor || 'var(--vscode-tab-activeBackground)';
+    const fgColor = config.foregroundColor || 'var(--vscode-tab-activeForeground)';
+    const indicatorColor = config.indicatorColor || '#00FFFF';
+    const headerEnhancementsEnabled = config.headerEnhancementsEnabled !== false;
+
+    // メインコンテナ
+    const container = HeaderFactory.createHeaderContainer({
+      terminalId,
+      customClasses,
+      bgColor,
+      fgColor,
+      indicatorColor,
+      headerEnhancementsEnabled,
+    });
+
+    HeaderFactory.ensureProcessingIndicatorStyles();
+
+    const processingIndicator = HeaderFactory.createProcessingIndicator();
+
+    const { titleSection, nameSpan, idSpan, statusSection, controlsSection } =
+      HeaderFactory.createHeaderSections(terminalName, fgColor);
+
     // AI Agent切り替えボタン - より分かりやすいアイコンに変更
-    const aiAgentToggleButton = DOMUtils.createElement(
-      'button',
-      {
-        background: 'none',
-        border: 'none',
-        color: fgColor,
-        cursor: 'pointer',
-        fontSize: '14px',
-        padding: '4px',
-        borderRadius: '3px',
-        display: 'flex', // Always visible - changed from 'none' to support constant visibility
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s',
-        width: '24px',
-        height: '24px',
-        minWidth: '24px',
-        minHeight: '24px',
-        boxSizing: 'border-box',
-      },
-      {
-        textContent: '⏻', // AI Agent toggle icon
-        className: 'terminal-control ai-agent-toggle-btn',
-        title: 'Switch AI Agent Connection',
-        'data-terminal-id': terminalId,
-      }
-    );
+    const aiAgentToggleButton = HeaderFactory.createControlButton(fgColor, {
+      // Always visible - changed from 'none' to support constant visibility
+      textContent: '⏻', // AI Agent toggle icon
+      className: 'terminal-control ai-agent-toggle-btn',
+      title: 'Switch AI Agent Connection',
+      'data-terminal-id': terminalId,
+    });
 
     // 閉じるボタン
-    const closeButton = DOMUtils.createElement(
-      'button',
-      {
-        background: 'none',
-        border: 'none',
-        color: fgColor,
-        cursor: 'pointer',
-        fontSize: '14px',
-        padding: '4px',
-        borderRadius: '3px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: '0.7',
-        transition: 'opacity 0.2s, background-color 0.2s',
-        width: '24px',
-        height: '24px',
-        minWidth: '24px',
-        minHeight: '24px',
-        boxSizing: 'border-box',
-      },
-      {
-        textContent: '✕',
-        className: 'terminal-control close-btn',
-        title: 'Close Terminal',
-        'data-terminal-id': terminalId,
-      }
-    );
+    const closeButton = HeaderFactory.createControlButton(fgColor, {
+      textContent: '✕',
+      className: 'terminal-control close-btn',
+      title: 'Close Terminal',
+      'data-terminal-id': terminalId,
+    });
 
     // 分割ボタン (Split button)
     let splitButton: HTMLButtonElement | null = null;
     if (config.showSplitButton) {
-      splitButton = DOMUtils.createElement(
-        'button',
-        {
-          background: 'none',
-          border: 'none',
-          color: fgColor,
-          cursor: 'pointer',
-          fontSize: '14px',
-          padding: '4px',
-          borderRadius: '3px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          opacity: '0.7',
-          transition: 'opacity 0.2s, background-color 0.2s',
-          width: '24px',
-          height: '24px',
-          minWidth: '24px',
-          minHeight: '24px',
-          boxSizing: 'border-box',
-        },
-        {
-          textContent: '⊞',
-          className: 'terminal-control split-btn',
-          title: 'Split Terminal',
-          'data-terminal-id': terminalId,
-        }
-      );
+      splitButton = HeaderFactory.createControlButton(fgColor, {
+        textContent: '⊞',
+        className: 'terminal-control split-btn',
+        title: 'Split Terminal',
+        'data-terminal-id': terminalId,
+      });
     }
 
     // ホバーエフェクトを追加
-    aiAgentToggleButton.addEventListener('mouseenter', () => {
-      aiAgentToggleButton.style.opacity = '1';
-      aiAgentToggleButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
-    });
-
-    aiAgentToggleButton.addEventListener('mouseleave', () => {
-      aiAgentToggleButton.style.opacity = '0.7';
-      aiAgentToggleButton.style.backgroundColor = 'transparent';
-    });
-
-    closeButton.addEventListener('mouseenter', () => {
-      closeButton.style.opacity = '1';
-      closeButton.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
-    });
-
-    closeButton.addEventListener('mouseleave', () => {
-      closeButton.style.opacity = '0.7';
-      closeButton.style.backgroundColor = 'transparent';
-    });
-
-    // Split button hover effects
+    HeaderFactory.attachButtonHoverEffect(aiAgentToggleButton);
+    HeaderFactory.attachButtonHoverEffect(closeButton);
     if (splitButton) {
-      splitButton.addEventListener('mouseenter', () => {
-        splitButton!.style.opacity = '1';
-        splitButton!.style.backgroundColor = 'var(--vscode-toolbar-hoverBackground)';
-      });
-
-      splitButton.addEventListener('mouseleave', () => {
-        splitButton!.style.opacity = '0.7';
-        splitButton!.style.backgroundColor = 'transparent';
-      });
+      HeaderFactory.attachButtonHoverEffect(splitButton);
     }
 
-    // Add AI Agent toggle button click handler
-    if (config.onAiAgentToggleClick) {
-      aiAgentToggleButton.addEventListener('click', (event: MouseEvent) => {
-        event.stopPropagation(); // Prevent header click event
-        config.onAiAgentToggleClick!(terminalId);
-        log(`⏻ [HeaderFactory] AI Agent toggle button clicked for terminal: ${terminalId}`);
-      });
-    }
-
-    // Add close button click handler with double-click protection
-    if (config.onCloseClick) {
-      let isClosing = false;
-      closeButton.addEventListener('click', (event: MouseEvent) => {
-        event.stopPropagation(); // Prevent header click event
-        event.preventDefault();
-
-        // 🔧 FIX: Prevent double-click from triggering multiple deletions
-        if (isClosing) {
-          log(`🗑️ [HeaderFactory] Close already in progress, ignoring: ${terminalId}`);
-          return;
-        }
-        isClosing = true;
-
-        log(`🗑️ [HeaderFactory] Close button clicked for terminal: ${terminalId}`);
-        config.onCloseClick!(terminalId);
-
-        // Reset after a short delay to allow re-click if needed
-        setTimeout(() => {
-          isClosing = false;
-        }, 500);
-      });
-    }
-
-    // Add split button click handler
-    if (splitButton && config.onSplitClick) {
-      splitButton.addEventListener('click', (event: MouseEvent) => {
-        event.stopPropagation(); // Prevent header click event
-        config.onSplitClick!(terminalId);
-        log(`⊞ [HeaderFactory] Split button clicked for terminal: ${terminalId}`);
-      });
-    }
-
-    // Add header click handler for terminal activation
-    if (config.onHeaderClick) {
-      container.addEventListener('click', (event: MouseEvent) => {
-        // Prevent click if clicking on controls, rename input, or second click of double-click.
-        // Keep single-click activation behavior intact.
-        const target = event.target as HTMLElement;
-        if (target.closest('.terminal-control')) {
-          return;
-        }
-        if (target.closest('.terminal-name-edit-input')) {
-          return;
-        }
-        if (target.closest('.terminal-header-editor')) {
-          return;
-        }
-        if (event.detail >= 2) {
-          return;
-        }
-
-        config.onHeaderClick!(terminalId);
-        log(`🎯 [HeaderFactory] Header clicked, activating terminal: ${terminalId}`);
-      });
-
-      // Add visual feedback for clickable header
-      container.style.cursor = 'pointer';
-    }
+    HeaderFactory.attachHeaderClickHandlers(config, {
+      container,
+      aiAgentToggleButton,
+      closeButton,
+      splitButton,
+    });
 
     if (config.onRenameSubmit || config.onHeaderUpdate) {
       HeaderFactory.setupHeaderEditor({
@@ -476,6 +541,246 @@ export class HeaderFactory {
     };
   }
 
+  /**
+   * Create the editor container (vertical flex shell).
+   */
+  private static createEditorShell(): HTMLDivElement {
+    const editor = document.createElement('div');
+    editor.className = 'terminal-header-editor';
+    editor.style.display = 'flex';
+    editor.style.flexDirection = 'column';
+    editor.style.gap = '6px';
+    editor.style.width = '100%';
+    editor.style.minWidth = '0';
+    return editor;
+  }
+
+  /**
+   * Create the rename text input pre-filled with the current name.
+   */
+  private static createRenameInput(originalName: string): HTMLInputElement {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'terminal-name-edit-input';
+    input.value = originalName;
+    input.title = originalName;
+    input.style.background = 'var(--vscode-input-background)';
+    input.style.color = 'var(--vscode-input-foreground)';
+    input.style.border = '1px solid var(--vscode-input-border)';
+    input.style.borderRadius = '3px';
+    input.style.padding = '2px 6px';
+    input.style.fontSize = '11px';
+    input.style.lineHeight = '1.4';
+    input.style.width = '100%';
+    input.style.minWidth = '0';
+    input.style.boxSizing = 'border-box';
+    input.style.userSelect = 'text';
+    return input;
+  }
+
+  /**
+   * Create the color palette container and its focus-guard listeners.
+   */
+  private static createPaletteShell(state: HeaderEditorState): HTMLDivElement {
+    const palette = document.createElement('div');
+    palette.className = 'terminal-header-color-palette';
+    palette.style.display = 'flex';
+    palette.style.flexWrap = 'wrap';
+    palette.style.gap = '4px';
+    // Selected option uses transform scale which doesn't affect layout size.
+    // Add padding so the scaled circle still fits inside the header frame.
+    palette.style.padding = '3px';
+    palette.style.boxSizing = 'border-box';
+    palette.style.alignItems = 'center';
+    palette.addEventListener(
+      'pointerdown',
+      (e) => {
+        // Prevent focus from leaving the input (which would blur + close the editor).
+        e.preventDefault();
+        e.stopPropagation();
+        state.isPaletteInteracting = true;
+      },
+      { capture: true }
+    );
+    palette.addEventListener('mousedown', (e) => {
+      // Keep input focus so blur doesn't close the editor when interacting with palette area.
+      e.preventDefault();
+      e.stopPropagation();
+      state.isPaletteInteracting = true;
+    });
+    palette.addEventListener('mouseup', (e) => {
+      e.stopPropagation();
+      // If blur doesn't happen (focus preserved), clear the guard after blur's rAF would run.
+      requestAnimationFrame(() => {
+        state.isPaletteInteracting = false;
+      });
+    });
+    palette.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // In case focus didn't change, clear the interaction guard.
+      requestAnimationFrame(() => {
+        state.isPaletteInteracting = false;
+      });
+    });
+    return palette;
+  }
+
+  /**
+   * Build a single color-option button for the header editor palette.
+   */
+  private static buildColorOptionButton(
+    color: string,
+    ctx: HeaderEditorContext,
+    state: HeaderEditorState,
+    deps: { input: HTMLInputElement; refreshSelection: () => void }
+  ): HTMLButtonElement {
+    const { container, terminalId } = ctx;
+    const { input, refreshSelection } = deps;
+
+    const colorButton = document.createElement('button');
+    colorButton.type = 'button';
+    colorButton.className = 'terminal-header-color-option';
+    colorButton.dataset.indicatorColor = color;
+    colorButton.title = color === 'transparent' ? 'OFF' : color;
+    colorButton.style.width = '14px';
+    colorButton.style.height = '14px';
+    colorButton.style.borderRadius = '50%';
+    colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
+    colorButton.style.padding = '0';
+    colorButton.style.cursor = 'pointer';
+    colorButton.style.transition = 'transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease';
+    if (color === 'transparent') {
+      colorButton.textContent = 'OFF';
+      colorButton.style.width = '26px';
+      colorButton.style.borderRadius = '10px';
+      colorButton.style.background = 'var(--vscode-button-secondaryBackground)';
+      colorButton.style.color = 'var(--vscode-button-secondaryForeground)';
+      colorButton.style.fontSize = '9px';
+      colorButton.style.fontWeight = '700';
+      colorButton.style.lineHeight = '1';
+    } else {
+      colorButton.style.backgroundColor = color;
+    }
+    colorButton.addEventListener(
+      'pointerdown',
+      (e) => {
+        // Prevent click-to-focus; keep rename input focused.
+        e.preventDefault();
+        e.stopPropagation();
+        state.isPaletteInteracting = true;
+      },
+      { capture: true }
+    );
+    colorButton.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      state.isPaletteInteracting = true;
+    });
+    colorButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      state.currentIndicatorColor = color;
+      state.pendingIndicatorColor = color;
+      container.style.setProperty('--terminal-indicator-color', color);
+      refreshSelection();
+
+      // Flash processing indicator for visual feedback
+      const indicator = container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      if (indicator) {
+        const flow = container.querySelector(
+          '.terminal-processing-indicator-flow'
+        ) as HTMLElement | null;
+        if (state.paletteFlashTimer) {
+          window.clearTimeout(state.paletteFlashTimer);
+          state.paletteFlashTimer = null;
+        }
+        indicator.style.opacity = '1';
+        if (flow) {
+          // Show the flow once (not infinite) to confirm the selected color.
+          // Then restore the default infinite animation used for the processing indicator.
+          // Reset animation state so it always starts from the beginning and looks smooth.
+          flow.style.willChange = 'transform';
+          flow.style.animation = 'none';
+          flow.style.transform = 'translateX(-130%)';
+          // Force reflow to apply the reset before re-enabling animation.
+          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+          flow.offsetHeight;
+          flow.style.animation = 'terminal-processing-flow 0.65s linear 1';
+        }
+        state.paletteFlashTimer = window.setTimeout(() => {
+          indicator.style.opacity = '0';
+          if (flow) {
+            flow.style.animation = 'terminal-processing-flow 1.1s linear infinite';
+          }
+          state.paletteFlashTimer = null;
+        }, 600);
+      }
+
+      // Re-focus input to keep editor open
+      input.focus();
+      // If blur was triggered, its rAF should see isPaletteInteracting=true and keep editor open.
+      // Clear after that point to avoid swallowing the next genuine blur.
+      requestAnimationFrame(() => {
+        state.isPaletteInteracting = false;
+      });
+
+      log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
+    });
+
+    return colorButton;
+  }
+
+  /**
+   * Finalize (commit or cancel) the header rename and indicator color edit, restoring the DOM.
+   */
+  private static finalizeHeaderRename(
+    commit: boolean,
+    ctx: HeaderEditorContext,
+    state: HeaderEditorState,
+    refs: { editor: HTMLElement; input: HTMLInputElement; originalName: string }
+  ): void {
+    if (!state.isEditing) {
+      return;
+    }
+    state.isEditing = false;
+
+    const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } = ctx;
+    const initialIndicatorColor = state.initialIndicatorColor;
+    const { editor, input, originalName } = refs;
+
+    const nextName = input.value.trim();
+    const shouldCommit = commit && nextName.length > 0 && nextName !== originalName;
+
+    if (editor.parentElement === titleSection) {
+      titleSection.replaceChild(nameSpan, editor);
+    } else if (!nameSpan.parentElement) {
+      titleSection.appendChild(nameSpan);
+    }
+
+    if (shouldCommit) {
+      nameSpan.textContent = nextName;
+      nameSpan.setAttribute('title', nextName);
+      onRenameSubmit?.(terminalId, nextName);
+      onHeaderUpdate?.(terminalId, { newName: nextName });
+      log(`✏️ [HeaderFactory] Terminal renamed via header: ${terminalId} -> ${nextName}`);
+    } else {
+      nameSpan.textContent = originalName;
+      nameSpan.setAttribute('title', originalName);
+    }
+
+    // Commit indicator color only when closing the editor.
+    if (commit) {
+      const finalColor = state.pendingIndicatorColor ?? state.currentIndicatorColor;
+      if (finalColor && finalColor !== initialIndicatorColor) {
+        onHeaderUpdate?.(terminalId, { indicatorColor: finalColor });
+      }
+    } else if (state.pendingIndicatorColor) {
+      // Cancel: revert to the initial indicator color.
+      state.currentIndicatorColor = initialIndicatorColor;
+      container.style.setProperty('--terminal-indicator-color', initialIndicatorColor);
+    }
+  }
+
   private static setupHeaderEditor(params: {
     terminalId: string;
     container: HTMLElement;
@@ -491,14 +796,45 @@ export class HeaderFactory {
   }): void {
     const { terminalId, container, titleSection, nameSpan, onRenameSubmit, onHeaderUpdate } =
       params;
-    let isEditing = false;
-    let isPaletteInteracting = false;
-    let currentIndicatorColor = params.initialIndicatorColor;
-    const initialIndicatorColor = params.initialIndicatorColor;
-    let paletteFlashTimer: number | null = null;
-    let pendingIndicatorColor: string | null = null;
+
+    // Editor state shared across multiple openEditor invocations on this header.
+    const state: HeaderEditorState = {
+      isEditing: false,
+      isPaletteInteracting: false,
+      currentIndicatorColor: params.initialIndicatorColor,
+      initialIndicatorColor: params.initialIndicatorColor,
+      paletteFlashTimer: null,
+      pendingIndicatorColor: null,
+    };
+
+    const ctx: HeaderEditorContext = {
+      terminalId,
+      container,
+      titleSection,
+      nameSpan,
+      onRenameSubmit,
+      onHeaderUpdate,
+    };
 
     const openEditor = (event: MouseEvent): void => {
+      HeaderFactory.openHeaderEditor(event, ctx, state);
+    };
+
+    nameSpan.addEventListener('dblclick', openEditor);
+    container.addEventListener('dblclick', openEditor);
+  }
+
+  /**
+   * Open the inline header editor (rename input + optional color palette).
+   */
+  private static openHeaderEditor(
+    event: MouseEvent,
+    ctx: HeaderEditorContext,
+    state: HeaderEditorState
+  ): void {
+    const { container, nameSpan } = ctx;
+    const initialIndicatorColor = state.initialIndicatorColor;
+    {
       const target = event.target as HTMLElement;
       if (target.closest('.terminal-control')) {
         return;
@@ -510,95 +846,33 @@ export class HeaderFactory {
       event.preventDefault();
       event.stopPropagation();
 
-      if (isEditing) {
+      if (state.isEditing) {
         return;
       }
-      isEditing = true;
+      state.isEditing = true;
 
       // Reset stale palette state from a previous editor session so that
       // onHeaderUpdate comparisons (finalColor !== initialIndicatorColor)
       // don't erroneously fire with a previously committed color.
-      pendingIndicatorColor = null;
-      currentIndicatorColor = initialIndicatorColor;
-      if (paletteFlashTimer) {
-        window.clearTimeout(paletteFlashTimer);
-        paletteFlashTimer = null;
+      state.pendingIndicatorColor = null;
+      state.currentIndicatorColor = initialIndicatorColor;
+      if (state.paletteFlashTimer) {
+        window.clearTimeout(state.paletteFlashTimer);
+        state.paletteFlashTimer = null;
       }
 
       const originalName = nameSpan.textContent?.trim() || '';
 
-      const editor = document.createElement('div');
-      editor.className = 'terminal-header-editor';
-      editor.style.display = 'flex';
-      editor.style.flexDirection = 'column';
-      editor.style.gap = '6px';
-      editor.style.width = '100%';
-      editor.style.minWidth = '0';
-
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.className = 'terminal-name-edit-input';
-      input.value = originalName;
-      input.title = originalName;
-      input.style.background = 'var(--vscode-input-background)';
-      input.style.color = 'var(--vscode-input-foreground)';
-      input.style.border = '1px solid var(--vscode-input-border)';
-      input.style.borderRadius = '3px';
-      input.style.padding = '2px 6px';
-      input.style.fontSize = '11px';
-      input.style.lineHeight = '1.4';
-      input.style.width = '100%';
-      input.style.minWidth = '0';
-      input.style.boxSizing = 'border-box';
-      input.style.userSelect = 'text';
-
-      const palette = document.createElement('div');
-      palette.className = 'terminal-header-color-palette';
-      palette.style.display = 'flex';
-      palette.style.flexWrap = 'wrap';
-      palette.style.gap = '4px';
-      // Selected option uses transform scale which doesn't affect layout size.
-      // Add padding so the scaled circle still fits inside the header frame.
-      palette.style.padding = '3px';
-      palette.style.boxSizing = 'border-box';
-      palette.style.alignItems = 'center';
-      palette.addEventListener(
-        'pointerdown',
-        (e) => {
-          // Prevent focus from leaving the input (which would blur + close the editor).
-          e.preventDefault();
-          e.stopPropagation();
-          isPaletteInteracting = true;
-        },
-        { capture: true }
-      );
-      palette.addEventListener('mousedown', (e) => {
-        // Keep input focus so blur doesn't close the editor when interacting with palette area.
-        e.preventDefault();
-        e.stopPropagation();
-        isPaletteInteracting = true;
-      });
-      palette.addEventListener('mouseup', (e) => {
-        e.stopPropagation();
-        // If blur doesn't happen (focus preserved), clear the guard after blur's rAF would run.
-        requestAnimationFrame(() => {
-          isPaletteInteracting = false;
-        });
-      });
-      palette.addEventListener('click', (e) => {
-        e.stopPropagation();
-        // In case focus didn't change, clear the interaction guard.
-        requestAnimationFrame(() => {
-          isPaletteInteracting = false;
-        });
-      });
+      const editor = HeaderFactory.createEditorShell();
+      const input = HeaderFactory.createRenameInput(originalName);
+      const palette = HeaderFactory.createPaletteShell(state);
 
       const refreshSelection = (): void => {
         const options = palette.querySelectorAll<HTMLButtonElement>(
           '.terminal-header-color-option'
         );
         options.forEach((option) => {
-          const isSelected = option.dataset.indicatorColor === currentIndicatorColor;
+          const isSelected = option.dataset.indicatorColor === state.currentIndicatorColor;
           option.style.outline = isSelected ? '2px solid var(--vscode-focusBorder)' : 'none';
           option.style.outlineOffset = isSelected ? '1px' : '0';
           option.style.opacity = isSelected ? '1' : '0.6';
@@ -610,97 +884,9 @@ export class HeaderFactory {
       const enhancementsEnabled = container.dataset.headerEnhancementsEnabled !== 'false';
       if (enhancementsEnabled) {
         HEADER_INDICATOR_COLOR_PALETTE.forEach((color) => {
-          const colorButton = document.createElement('button');
-          colorButton.type = 'button';
-          colorButton.className = 'terminal-header-color-option';
-          colorButton.dataset.indicatorColor = color;
-          colorButton.title = color === 'transparent' ? 'OFF' : color;
-          colorButton.style.width = '14px';
-          colorButton.style.height = '14px';
-          colorButton.style.borderRadius = '50%';
-          colorButton.style.border = '1px solid rgba(127, 127, 127, 0.6)';
-          colorButton.style.padding = '0';
-          colorButton.style.cursor = 'pointer';
-          colorButton.style.transition =
-            'transform 0.15s ease, opacity 0.15s ease, outline 0.15s ease';
-          if (color === 'transparent') {
-            colorButton.textContent = 'OFF';
-            colorButton.style.width = '26px';
-            colorButton.style.borderRadius = '10px';
-            colorButton.style.background = 'var(--vscode-button-secondaryBackground)';
-            colorButton.style.color = 'var(--vscode-button-secondaryForeground)';
-            colorButton.style.fontSize = '9px';
-            colorButton.style.fontWeight = '700';
-            colorButton.style.lineHeight = '1';
-          } else {
-            colorButton.style.backgroundColor = color;
-          }
-          colorButton.addEventListener(
-            'pointerdown',
-            (e) => {
-              // Prevent click-to-focus; keep rename input focused.
-              e.preventDefault();
-              e.stopPropagation();
-              isPaletteInteracting = true;
-            },
-            { capture: true }
-          );
-          colorButton.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            isPaletteInteracting = true;
-          });
-          colorButton.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            currentIndicatorColor = color;
-            pendingIndicatorColor = color;
-            container.style.setProperty('--terminal-indicator-color', color);
-            refreshSelection();
-
-            // Flash processing indicator for visual feedback
-            const indicator = container.querySelector(
-              '.terminal-processing-indicator'
-            ) as HTMLElement;
-            if (indicator) {
-              const flow = container.querySelector(
-                '.terminal-processing-indicator-flow'
-              ) as HTMLElement | null;
-              if (paletteFlashTimer) {
-                window.clearTimeout(paletteFlashTimer);
-                paletteFlashTimer = null;
-              }
-              indicator.style.opacity = '1';
-              if (flow) {
-                // Show the flow once (not infinite) to confirm the selected color.
-                // Then restore the default infinite animation used for the processing indicator.
-                // Reset animation state so it always starts from the beginning and looks smooth.
-                flow.style.willChange = 'transform';
-                flow.style.animation = 'none';
-                flow.style.transform = 'translateX(-130%)';
-                // Force reflow to apply the reset before re-enabling animation.
-                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-                flow.offsetHeight;
-                flow.style.animation = 'terminal-processing-flow 0.65s linear 1';
-              }
-              paletteFlashTimer = window.setTimeout(() => {
-                indicator.style.opacity = '0';
-                if (flow) {
-                  flow.style.animation = 'terminal-processing-flow 1.1s linear infinite';
-                }
-                paletteFlashTimer = null;
-              }, 600);
-            }
-
-            // Re-focus input to keep editor open
-            input.focus();
-            // If blur was triggered, its rAF should see isPaletteInteracting=true and keep editor open.
-            // Clear after that point to avoid swallowing the next genuine blur.
-            requestAnimationFrame(() => {
-              isPaletteInteracting = false;
-            });
-
-            log(`🎨 [HeaderFactory] Indicator color updated: ${terminalId} -> ${color}`);
+          const colorButton = HeaderFactory.buildColorOptionButton(color, ctx, state, {
+            input,
+            refreshSelection,
           });
           palette.appendChild(colorButton);
         });
@@ -708,42 +894,7 @@ export class HeaderFactory {
       }
 
       const finalizeRename = (commit: boolean): void => {
-        if (!isEditing) {
-          return;
-        }
-        isEditing = false;
-
-        const nextName = input.value.trim();
-        const shouldCommit = commit && nextName.length > 0 && nextName !== originalName;
-
-        if (editor.parentElement === titleSection) {
-          titleSection.replaceChild(nameSpan, editor);
-        } else if (!nameSpan.parentElement) {
-          titleSection.appendChild(nameSpan);
-        }
-
-        if (shouldCommit) {
-          nameSpan.textContent = nextName;
-          nameSpan.setAttribute('title', nextName);
-          onRenameSubmit?.(terminalId, nextName);
-          onHeaderUpdate?.(terminalId, { newName: nextName });
-          log(`✏️ [HeaderFactory] Terminal renamed via header: ${terminalId} -> ${nextName}`);
-        } else {
-          nameSpan.textContent = originalName;
-          nameSpan.setAttribute('title', originalName);
-        }
-
-        // Commit indicator color only when closing the editor.
-        if (commit) {
-          const finalColor = pendingIndicatorColor ?? currentIndicatorColor;
-          if (finalColor && finalColor !== initialIndicatorColor) {
-            onHeaderUpdate?.(terminalId, { indicatorColor: finalColor });
-          }
-        } else if (pendingIndicatorColor) {
-          // Cancel: revert to the initial indicator color.
-          currentIndicatorColor = initialIndicatorColor;
-          container.style.setProperty('--terminal-indicator-color', initialIndicatorColor);
-        }
+        HeaderFactory.finalizeHeaderRename(commit, ctx, state, { editor, input, originalName });
       };
 
       input.addEventListener('click', (e) => e.stopPropagation());
@@ -761,7 +912,7 @@ export class HeaderFactory {
       });
       input.addEventListener('focusout', (evt: FocusEvent) => {
         requestAnimationFrame(() => {
-          if (!isEditing) return;
+          if (!state.isEditing) return;
           const related = evt.relatedTarget as HTMLElement | null;
           if (related && editor.contains(related)) {
             return;
@@ -771,55 +922,77 @@ export class HeaderFactory {
           if (active && editor.contains(active)) {
             return;
           }
-          if (isPaletteInteracting) {
-            isPaletteInteracting = false;
+          if (state.isPaletteInteracting) {
+            state.isPaletteInteracting = false;
             return;
           }
           finalizeRename(true);
         });
       });
 
-      editor.appendChild(input);
-      if (enhancementsEnabled) {
-        editor.appendChild(palette);
+      HeaderFactory.mountAndFocusEditor(
+        { editor, input, palette, enhancementsEnabled },
+        ctx,
+        state,
+        finalizeRename
+      );
+    }
+  }
+
+  /**
+   * Assemble the editor into the DOM, wire the palette double-click close, and focus the input.
+   */
+  private static mountAndFocusEditor(
+    elements: {
+      editor: HTMLElement;
+      input: HTMLInputElement;
+      palette: HTMLElement;
+      enhancementsEnabled: boolean;
+    },
+    ctx: HeaderEditorContext,
+    state: HeaderEditorState,
+    finalizeRename: (commit: boolean) => void
+  ): void {
+    const { editor, input, palette, enhancementsEnabled } = elements;
+    const { titleSection, nameSpan } = ctx;
+
+    editor.appendChild(input);
+    if (enhancementsEnabled) {
+      editor.appendChild(palette);
+    }
+
+    if (enhancementsEnabled) {
+      palette.addEventListener('dblclick', (e) => {
+        // Single click selects colors; double click closes the editor.
+        e.preventDefault();
+        e.stopPropagation();
+        state.isPaletteInteracting = false;
+        finalizeRename(true);
+      });
+    }
+
+    if (nameSpan.parentElement === titleSection) {
+      titleSection.replaceChild(editor, nameSpan);
+    } else {
+      titleSection.appendChild(editor);
+    }
+
+    input.focus();
+    input.select();
+    // Header single-click activation can enqueue terminal focus.
+    // Re-assert focus on the rename input so double-click rename remains usable.
+    window.setTimeout(() => {
+      if (!state.isEditing) {
+        return;
       }
-
-      if (enhancementsEnabled) {
-        palette.addEventListener('dblclick', (e) => {
-          // Single click selects colors; double click closes the editor.
-          e.preventDefault();
-          e.stopPropagation();
-          isPaletteInteracting = false;
-          finalizeRename(true);
-        });
+      if (typeof document === 'undefined') {
+        return;
       }
-
-      if (nameSpan.parentElement === titleSection) {
-        titleSection.replaceChild(editor, nameSpan);
-      } else {
-        titleSection.appendChild(editor);
+      if (document.activeElement !== input) {
+        input.focus();
+        input.select();
       }
-
-      input.focus();
-      input.select();
-      // Header single-click activation can enqueue terminal focus.
-      // Re-assert focus on the rename input so double-click rename remains usable.
-      window.setTimeout(() => {
-        if (!isEditing) {
-          return;
-        }
-        if (typeof document === 'undefined') {
-          return;
-        }
-        if (document.activeElement !== input) {
-          input.focus();
-          input.select();
-        }
-      }, 24);
-    };
-
-    nameSpan.addEventListener('dblclick', openEditor);
-    container.addEventListener('dblclick', openEditor);
+    }, 24);
   }
 
   /**

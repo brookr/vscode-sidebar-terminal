@@ -61,6 +61,32 @@ interface ShellPromptPatterns {
  * Centralized pattern registry for CLI Agent detection
  */
 export class CliAgentPatternRegistry {
+  /** Maps lowercase command aliases / package names to their agent type. */
+  private static readonly AGENT_ALIASES: Readonly<Record<string, AgentType>> = {
+    claude: 'claude',
+    'claude-code': 'claude',
+    '@anthropic-ai/claude-code': 'claude',
+    gemini: 'gemini',
+    'gemini-cli': 'gemini',
+    '@google/gemini-cli': 'gemini',
+    codex: 'codex',
+    'openai-codex': 'codex',
+    '@openai/codex': 'codex',
+    copilot: 'copilot',
+    '@github/copilot': 'copilot',
+    'github/copilot': 'copilot',
+    'gh-copilot': 'copilot',
+    opencode: 'opencode',
+    '@opencode-ai/opencode': 'opencode',
+    '@sst/opencode': 'opencode',
+    'sst/opencode': 'opencode',
+    agy: 'antigravity',
+    antigravity: 'antigravity',
+    '@google/antigravity-cli': 'antigravity',
+    'google/antigravity-cli': 'antigravity',
+    'antigravity-cli': 'antigravity',
+  };
+
   private readonly agentPatterns: Map<AgentType, AgentPatternDefinition>;
   private readonly shellPromptPatterns: ShellPromptPatterns;
 
@@ -445,38 +471,7 @@ export class CliAgentPatternRegistry {
 
   private matchAgentAlias(token: string): AgentType | null {
     const normalized = token.toLowerCase();
-    switch (normalized) {
-      case 'claude':
-      case 'claude-code':
-      case '@anthropic-ai/claude-code':
-        return 'claude';
-      case 'gemini':
-      case 'gemini-cli':
-      case '@google/gemini-cli':
-        return 'gemini';
-      case 'codex':
-      case 'openai-codex':
-      case '@openai/codex':
-        return 'codex';
-      case 'copilot':
-      case '@github/copilot':
-      case 'github/copilot':
-      case 'gh-copilot':
-        return 'copilot';
-      case 'opencode':
-      case '@opencode-ai/opencode':
-      case '@sst/opencode':
-      case 'sst/opencode':
-        return 'opencode';
-      case 'agy':
-      case 'antigravity':
-      case '@google/antigravity-cli':
-      case 'google/antigravity-cli':
-      case 'antigravity-cli':
-        return 'antigravity';
-      default:
-        return null;
-    }
+    return CliAgentPatternRegistry.AGENT_ALIASES[normalized] ?? null;
   }
 
   /**

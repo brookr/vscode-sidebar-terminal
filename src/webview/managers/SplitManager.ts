@@ -293,6 +293,10 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
     this.splitManagerLogger.info('Terminal added to multi-split layout');
   }
 
+  private static isVisibleSplitElement(element: HTMLElement): boolean {
+    return element.style.display !== 'none' && !element.classList.contains('hidden-mode');
+  }
+
   public redistributeSplitTerminals(newHeight: number): void {
     this.splitManagerLogger.info(`Redistributing split terminals with new height: ${newHeight}px`);
 
@@ -305,27 +309,14 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
 
     const terminalsWrapper = document.getElementById('terminals-wrapper');
     const terminalBody = document.getElementById('terminal-body');
-    const isVisibleElement = (element: HTMLElement): boolean =>
-      element.style.display !== 'none' && !element.classList.contains('hidden-mode');
 
     // Force reflow to ensure CSS changes are applied before reading dimensions
     DOMUtils.forceReflow(terminalsWrapper);
 
-    const wrapperTargets = terminalsWrapper
-      ? Array.from(
-          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
-        ).filter(isVisibleElement)
-      : [];
-
-    const containerTargets = terminalsWrapper
-      ? Array.from(
-          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-container]')
-        ).filter(isVisibleElement)
-      : Array.from(
-          (terminalBody ?? document.body).querySelectorAll<HTMLElement>('[data-terminal-container]')
-        ).filter(isVisibleElement);
-
-    const targets = wrapperTargets.length > 0 ? wrapperTargets : containerTargets;
+    const { wrapperTargets, targets } = this.collectRedistributionTargets(
+      terminalsWrapper,
+      terminalBody
+    );
     const targetCount = targets.length;
 
     if (!this.isSplitMode && targetCount === 0) {
@@ -355,6 +346,55 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
       return;
     }
 
+    const availableHeight = this.computeAvailableRedistributionHeight(terminalsWrapper, baseHeight);
+    const terminalHeight = Math.floor(availableHeight / targetCount);
+    const remainder = Math.max(0, availableHeight - terminalHeight * targetCount);
+
+    this.splitManagerLogger.debug(
+      `availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px, remainder=${remainder}px`
+    );
+
+    this.applyRedistributedHeights(targets, wrapperTargets, terminalHeight, remainder);
+
+    this.refitAllTerminals();
+  }
+
+  /**
+   * Collect the visible terminal wrapper/container elements that should be resized.
+   */
+  private collectRedistributionTargets(
+    terminalsWrapper: HTMLElement | null,
+    terminalBody: HTMLElement | null
+  ): { wrapperTargets: HTMLElement[]; targets: HTMLElement[] } {
+    const isVisibleElement = SplitManager.isVisibleSplitElement;
+
+    const wrapperTargets = terminalsWrapper
+      ? Array.from(
+          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-wrapper-id]')
+        ).filter(isVisibleElement)
+      : [];
+
+    const containerTargets = terminalsWrapper
+      ? Array.from(
+          terminalsWrapper.querySelectorAll<HTMLElement>('[data-terminal-container]')
+        ).filter(isVisibleElement)
+      : Array.from(
+          (terminalBody ?? document.body).querySelectorAll<HTMLElement>('[data-terminal-container]')
+        ).filter(isVisibleElement);
+
+    const targets = wrapperTargets.length > 0 ? wrapperTargets : containerTargets;
+    return { wrapperTargets, targets };
+  }
+
+  /**
+   * Compute the available height for terminals after accounting for padding, gaps and resizers.
+   */
+  private computeAvailableRedistributionHeight(
+    terminalsWrapper: HTMLElement | null,
+    baseHeight: number
+  ): number {
+    const isVisibleElement = SplitManager.isVisibleSplitElement;
+
     const wrapperStyles = terminalsWrapper ? window.getComputedStyle(terminalsWrapper) : null;
     const paddingTop = wrapperStyles ? parseFloat(wrapperStyles.paddingTop) || 0 : 0;
     const paddingBottom = wrapperStyles ? parseFloat(wrapperStyles.paddingBottom) || 0 : 0;
@@ -379,16 +419,22 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
           }, 0)
       : 0;
 
-    const availableHeight = Math.max(
+    return Math.max(
       0,
       baseHeight - paddingTop - paddingBottom - rowGap * gapCount - totalResizerHeight
     );
-    const terminalHeight = Math.floor(availableHeight / targetCount);
-    const remainder = Math.max(0, availableHeight - terminalHeight * targetCount);
+  }
 
-    this.splitManagerLogger.debug(
-      `availableHeight=${availableHeight}px, terminalHeight=${terminalHeight}px, remainder=${remainder}px`
-    );
+  /**
+   * Apply the computed heights to each terminal target and stretch terminal areas.
+   */
+  private applyRedistributedHeights(
+    targets: HTMLElement[],
+    wrapperTargets: HTMLElement[],
+    terminalHeight: number,
+    remainder: number
+  ): void {
+    const targetCount = targets.length;
 
     targets.forEach((target, index) => {
       const allocatedHeight = terminalHeight + (index === targetCount - 1 ? remainder : 0);
@@ -408,8 +454,6 @@ export class SplitManager extends BaseManager implements ISplitLayoutController 
         }
       });
     }
-
-    this.refitAllTerminals();
   }
 
   public getSplitTerminals(): Map<string, HTMLElement> {

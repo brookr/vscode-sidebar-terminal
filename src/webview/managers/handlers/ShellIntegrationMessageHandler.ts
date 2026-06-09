@@ -209,7 +209,7 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
    */
   private createSearchUI(
     terminal: Terminal,
-    searchAddon: { findNext?: () => void; clearDecorations?: () => void }
+    searchAddon: { findNext?: () => void; findPrevious?: () => void; clearDecorations?: () => void }
   ): void {
     // Add CSS styles if not already added
     this.addSearchStyles();
@@ -337,7 +337,7 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
    */
   private setupSearchEventListeners(
     container: HTMLElement,
-    searchAddon: { findNext?: () => void; clearDecorations?: () => void }
+    searchAddon: { findNext?: () => void; findPrevious?: () => void; clearDecorations?: () => void }
   ): void {
     const searchInput = container.querySelector('.search-input') as HTMLInputElement;
     const nextBtn = container.querySelector('.search-next') as HTMLButtonElement;
@@ -364,8 +364,8 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
       if (e.key === 'Enter') {
         const searchTerm = searchInput.value;
         if (searchTerm) {
-          if (e.shiftKey && (searchAddon as any).findPrevious) {
-            (searchAddon as any).findPrevious();
+          if (e.shiftKey && searchAddon.findPrevious) {
+            searchAddon.findPrevious();
           } else {
             searchAddon.findNext?.();
           }
@@ -386,8 +386,8 @@ export class ShellIntegrationMessageHandler implements IMessageHandler {
     // Previous button
     prevBtn.addEventListener('click', () => {
       const searchTerm = searchInput.value;
-      if (searchTerm && (searchAddon as any).findPrevious) {
-        (searchAddon as any).findPrevious();
+      if (searchTerm && searchAddon.findPrevious) {
+        searchAddon.findPrevious();
       }
     });
 

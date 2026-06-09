@@ -218,7 +218,7 @@ export class SettingsCoordinator {
       for (const [id, instance] of terminals) {
         if (instance.terminal) {
           // Update xterm.js theme options
-          (instance.terminal as any).options.theme = theme;
+          instance.terminal.options.theme = theme;
 
           // Update container background color
           if (instance.container) {
@@ -226,22 +226,7 @@ export class SettingsCoordinator {
           }
 
           // Update xterm.js internal elements for immediate visual update
-          const terminalElement = instance.container?.querySelector('.xterm') as HTMLElement;
-          if (terminalElement) {
-            terminalElement.style.backgroundColor = theme.background;
-
-            // Update viewport background
-            const viewport = terminalElement.querySelector('.xterm-viewport') as HTMLElement;
-            if (viewport) {
-              viewport.style.backgroundColor = theme.background;
-            }
-
-            // Update screen background
-            const screen = terminalElement.querySelector('.xterm-screen') as HTMLElement;
-            if (screen) {
-              screen.style.backgroundColor = theme.background;
-            }
-          }
+          this.updateXtermElementBackgrounds(instance.container, theme.background);
 
           updatedCount++;
           log(`🎨 [THEME] Updated theme for terminal: ${id}`);
@@ -262,6 +247,33 @@ export class SettingsCoordinator {
       log(`🎨 [THEME] Theme updated for ${updatedCount} terminals`);
     } catch (error) {
       log('❌ Error updating terminal themes:', error);
+    }
+  }
+
+  /**
+   * Update xterm.js internal element backgrounds for immediate visual update
+   */
+  private updateXtermElementBackgrounds(
+    container: HTMLElement | undefined,
+    background: string
+  ): void {
+    const terminalElement = container?.querySelector('.xterm') as HTMLElement | null;
+    if (!terminalElement) {
+      return;
+    }
+
+    terminalElement.style.backgroundColor = background;
+
+    // Update viewport background
+    const viewport = terminalElement.querySelector('.xterm-viewport') as HTMLElement | null;
+    if (viewport) {
+      viewport.style.backgroundColor = background;
+    }
+
+    // Update screen background
+    const screen = terminalElement.querySelector('.xterm-screen') as HTMLElement | null;
+    if (screen) {
+      screen.style.backgroundColor = background;
     }
   }
 }

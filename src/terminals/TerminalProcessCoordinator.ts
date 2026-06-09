@@ -1,8 +1,17 @@
 import * as vscode from 'vscode';
-import { TerminalInstance, ProcessState } from '../types/shared';
+import { TerminalInstance, ProcessState, TerminalState } from '../types/shared';
 import { showWarningMessage } from '../utils/common';
 import { ShellIntegrationService } from '../services/ShellIntegrationService';
-import type { IDisposable } from 'node-pty';
+import type { IDisposable, IPty } from 'node-pty';
+
+/** Event payload emitted when a terminal's process state transitions */
+interface ProcessStateChangeEvent {
+  type: 'processStateChange';
+  terminalId: string;
+  previousState: ProcessState | undefined;
+  newState: ProcessState;
+  timestamp: number;
+}
 
 /** Manages PTY process lifecycle and shell integration */
 export class TerminalProcessCoordinator {
@@ -15,29 +24,38 @@ export class TerminalProcessCoordinator {
   constructor(
     private readonly _terminals: Map<string, TerminalInstance>,
     private readonly _shellIntegrationService: ShellIntegrationService | null,
-    private readonly _stateUpdateEmitter: vscode.EventEmitter<any>,
+    private readonly _stateUpdateEmitter: vscode.EventEmitter<TerminalState>,
     private readonly _bufferDataCallback: (terminalId: string, data: string) => void
   ) {}
 
-  public initializeShellForTerminal(terminalId: string, ptyProcess: any, safeMode: boolean): void {
+  public initializeShellForTerminal(
+    terminalId: string,
+    ptyProcess: unknown,
+    safeMode: boolean
+  ): void {
     if (this._shellInitialized.has(terminalId)) {
       return;
     }
 
     this._shellInitialized.add(terminalId);
 
+    // The caller (TerminalManager) hands this in as `unknown`, but at runtime it
+    // is always the terminal's node-pty process.
+    const pty = ptyProcess as IPty;
+
     if (this._shellIntegrationService && !safeMode) {
       const terminal = this._terminals.get(terminalId);
       if (terminal) {
-        const shellPath = (terminal.ptyProcess as any)?.spawnfile || '/bin/bash';
+        const shellPath =
+          (terminal.ptyProcess as IPty & { spawnfile?: string })?.spawnfile || '/bin/bash';
         void this._shellIntegrationService
-          .injectShellIntegration(terminalId, shellPath, ptyProcess)
+          .injectShellIntegration(terminalId, shellPath, pty)
           .catch(() => {});
       }
     }
 
     if (!safeMode) {
-      this.ensureInitialPrompt(terminalId, ptyProcess);
+      this.ensureInitialPrompt(terminalId, pty);
     }
   }
 
@@ -63,7 +81,7 @@ export class TerminalProcessCoordinator {
     terminal.processState = ProcessState.Launching;
     this.notifyProcessStateChange(terminal, ProcessState.Launching);
 
-    const dataDisposable: IDisposable = (ptyProcess as any).onData((data: string) => {
+    const dataDisposable: IDisposable = (ptyProcess as IPty).onData((data: string) => {
       if (terminal.processState === ProcessState.Launching) {
         terminal.processState = ProcessState.Running;
         this.notifyProcessStateChange(terminal, ProcessState.Running);
@@ -82,7 +100,7 @@ export class TerminalProcessCoordinator {
 
     this._ptyDataDisposables.set(terminalId, dataDisposable);
 
-    (ptyProcess as any).onExit((event: number | { exitCode: number; signal?: number }) => {
+    (ptyProcess as IPty).onExit((event: number | { exitCode: number; signal?: number }) => {
       const exitCode = typeof event === 'number' ? event : event.exitCode;
 
       if (terminal.processState !== ProcessState.KilledByUser) {
@@ -100,13 +118,17 @@ export class TerminalProcessCoordinator {
   public notifyProcessStateChange(terminal: TerminalInstance, newState: ProcessState): void {
     const previousState = terminal.processState;
 
-    this._stateUpdateEmitter.fire({
+    const event: ProcessStateChangeEvent = {
       type: 'processStateChange',
       terminalId: terminal.id,
       previousState,
       newState,
       timestamp: Date.now(),
-    } as any);
+    };
+    // The shared state emitter is typed as TerminalState, but this coordinator
+    // intentionally multiplexes process-state-change events through it. Preserve
+    // the existing runtime payload while keeping the local event strongly typed.
+    this._stateUpdateEmitter.fire(event as unknown as TerminalState);
 
     this.handleProcessStateActions(terminal, newState);
   }
@@ -154,7 +176,7 @@ export class TerminalProcessCoordinator {
     );
   }
 
-  private ensureInitialPrompt(terminalId: string, ptyProcess: any): void {
+  private ensureInitialPrompt(terminalId: string, ptyProcess: IPty): void {
     this.cleanupInitialPromptGuard(terminalId);
 
     if (!ptyProcess || typeof ptyProcess.write !== 'function') {

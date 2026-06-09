@@ -213,7 +213,7 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
         container.style.removeProperty('minHeight');
         DOMUtils.resetXtermInlineStyles(container, false);
       });
-      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+      // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- reading offsetWidth forces a synchronous layout flush
       document.body.offsetWidth;
 
       this.clearSplitArtifacts();
@@ -500,29 +500,8 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
-    const reorderedContainers: HTMLElement[] = [];
-    // Create new ordered cache to preserve drag-drop order
-    const newContainerCache = new Map<string, HTMLElement>();
-    const orderedIds: string[] = [];
-
-    for (const terminalId of order) {
-      const container = this.containerCache.get(terminalId);
-      if (container && document.contains(container)) {
-        reorderedContainers.push(container);
-        newContainerCache.set(terminalId, container);
-        orderedIds.push(terminalId);
-      } else if (container) {
-        this.containerCache.delete(terminalId);
-      }
-    }
-
-    // Add any remaining containers not in order array (preserves containers not explicitly reordered)
-    for (const [terminalId, container] of this.containerCache) {
-      if (!newContainerCache.has(terminalId)) {
-        newContainerCache.set(terminalId, container);
-        orderedIds.push(terminalId);
-      }
-    }
+    const { reorderedContainers, newContainerCache, orderedIds } =
+      this.buildReorderedContainerCache(order);
 
     if (reorderedContainers.length === 0) {
       this.log('No containers to reorder', 'warn');
@@ -549,6 +528,51 @@ export class TerminalContainerManager extends BaseManager implements ITerminalCo
       return;
     }
 
+    this.moveContainersInDom(reorderedContainers);
+  }
+
+  /**
+   * Build a new ordered container cache from the requested order, dropping cache
+   * entries whose DOM node has been detached and appending any containers not
+   * explicitly listed in the order array.
+   */
+  private buildReorderedContainerCache(order: string[]): {
+    reorderedContainers: HTMLElement[];
+    newContainerCache: Map<string, HTMLElement>;
+    orderedIds: string[];
+  } {
+    const reorderedContainers: HTMLElement[] = [];
+    // Create new ordered cache to preserve drag-drop order
+    const newContainerCache = new Map<string, HTMLElement>();
+    const orderedIds: string[] = [];
+
+    for (const terminalId of order) {
+      const container = this.containerCache.get(terminalId);
+      if (container && document.contains(container)) {
+        reorderedContainers.push(container);
+        newContainerCache.set(terminalId, container);
+        orderedIds.push(terminalId);
+      } else if (container) {
+        this.containerCache.delete(terminalId);
+      }
+    }
+
+    // Add any remaining containers not in order array (preserves containers not explicitly reordered)
+    for (const [terminalId, container] of this.containerCache) {
+      if (!newContainerCache.has(terminalId)) {
+        newContainerCache.set(terminalId, container);
+        orderedIds.push(terminalId);
+      }
+    }
+
+    return { reorderedContainers, newContainerCache, orderedIds };
+  }
+
+  /**
+   * Move the reordered containers in the DOM under the terminals wrapper (or
+   * terminal body fallback) using a fragment to minimize reflows.
+   */
+  private moveContainersInDom(reorderedContainers: HTMLElement[]): void {
     let parentContainer = document.getElementById('terminals-wrapper');
     if (!parentContainer) {
       parentContainer = document.getElementById('terminal-body');

@@ -6,6 +6,7 @@ import { TerminalConfig } from '../../../types/shared';
 import {
   IManagerCoordinator,
   IRenderingOptimizer,
+  ITerminalContainerManager,
   TerminalInstance,
 } from '../../interfaces/ManagerInterfaces';
 import { LifecycleController } from '../../controllers/LifecycleController';
@@ -160,6 +161,27 @@ export class TerminalLifecycleService {
       terminalLogger.info(`✅ Container registered with TerminalContainerManager: ${terminalId}`);
     }
 
+    this.applyDisplayMode(config, terminalId, terminalName);
+
+    this.registerHeaderElements(containerElements, uiManager, terminalId);
+
+    this.performInitialResize(terminal, fitAddon, container, terminalId);
+
+    this.setupInputHandling(terminal, terminalId, container);
+
+    this.dependencies.autoSaveService.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
+
+    return terminalInstance;
+  }
+
+  /**
+   * Apply split/normal/fullscreen display mode for a newly created terminal.
+   */
+  private applyDisplayMode(
+    config: TerminalConfig | undefined,
+    terminalId: string,
+    terminalName: string
+  ): void {
     const displayModeOverride = (config as { displayModeOverride?: string } | undefined)
       ?.displayModeOverride;
     if (
@@ -175,16 +197,28 @@ export class TerminalLifecycleService {
     ) {
       this.dependencies.splitManager.exitSplitMode();
     }
+  }
 
+  /**
+   * Register header elements with the UIManager cache for AI Agent support.
+   */
+  private registerHeaderElements(
+    containerElements: ReturnType<typeof TerminalContainerFactory.createContainer>,
+    uiManager: IUIManager | undefined,
+    terminalId: string
+  ): void {
     if (containerElements.headerElements && this.hasHeaderElementsCache(uiManager)) {
       uiManager.headerElementsCache.set(terminalId, containerElements.headerElements);
       terminalLogger.info(
         `✅ Header elements registered with UIManager for AI Agent support: ${terminalId}`
       );
     }
+  }
 
-    this.performInitialResize(terminal, fitAddon, container, terminalId);
-
+  /**
+   * Wire up xterm click/input handling for a terminal.
+   */
+  private setupInputHandling(terminal: Terminal, terminalId: string, container: HTMLElement): void {
     if (this.dependencies.coordinator.inputManager) {
       this.dependencies.coordinator.inputManager.addXtermClickHandler(
         terminal,
@@ -196,10 +230,6 @@ export class TerminalLifecycleService {
     } else {
       terminalLogger.error(`❌ InputManager not available for terminal: ${terminalId}`);
     }
-
-    this.dependencies.autoSaveService.setupScrollbackAutoSave(terminal, terminalId, serializeAddon);
-
-    return terminalInstance;
   }
 
   public async removeTerminal(terminalId: string): Promise<boolean> {
@@ -244,55 +274,7 @@ export class TerminalLifecycleService {
       this.dependencies.splitManager.getTerminals().delete(terminalId);
       this.dependencies.splitManager.getTerminalContainers().delete(terminalId);
 
-      const containerManager = this.dependencies.coordinator.getTerminalContainerManager?.();
-      if (containerManager) {
-        containerManager.unregisterContainer(terminalId);
-        terminalLogger.info(
-          `✅ Container unregistered from TerminalContainerManager: ${terminalId}`
-        );
-
-        const remainingTerminals = this.dependencies.splitManager.getTerminals().size;
-        const displayManager = this.dependencies.coordinator.getDisplayModeManager?.();
-        const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
-
-        terminalLogger.info(
-          `🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`
-        );
-
-        if (remainingTerminals <= 1) {
-          containerManager.clearSplitArtifacts();
-          terminalLogger.info(
-            `✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`
-          );
-
-          if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
-            displayManager.setDisplayMode('normal');
-            terminalLogger.info('✅ Switched to normal mode after deletion');
-          }
-        } else if (currentMode === 'split') {
-          const orderedIds = Array.from(this.dependencies.splitManager.getTerminals().keys());
-          const activeId =
-            this.dependencies.coordinator.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
-          const currentLocation =
-            (
-              this.dependencies.splitManager as {
-                getCurrentPanelLocation?: () => 'sidebar' | 'panel';
-              }
-            ).getCurrentPanelLocation?.() || 'sidebar';
-          const splitDirection =
-            this.dependencies.splitManager.getOptimalSplitDirection(currentLocation);
-          containerManager.applyDisplayState({
-            mode: 'split',
-            activeTerminalId: activeId,
-            orderedTerminalIds: orderedIds,
-            splitDirection,
-          });
-          terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
-        } else {
-          containerManager.clearSplitArtifacts();
-          terminalLogger.info(`✅ Cleared stray split artifacts in ${currentMode} mode`);
-        }
-      }
+      this.cleanupContainerAfterRemoval(terminalId);
 
       terminalLogger.info(`Terminal removed successfully: ${terminalId}`);
       return true;
@@ -300,6 +282,69 @@ export class TerminalLifecycleService {
       terminalLogger.error(`Failed to remove terminal ${terminalId}:`, error);
       return false;
     }
+  }
+
+  /**
+   * Unregister the removed terminal's container and rebuild/clear split layout as needed.
+   */
+  private cleanupContainerAfterRemoval(terminalId: string): void {
+    const containerManager = this.dependencies.coordinator.getTerminalContainerManager?.();
+    if (!containerManager) {
+      return;
+    }
+
+    containerManager.unregisterContainer(terminalId);
+    terminalLogger.info(`✅ Container unregistered from TerminalContainerManager: ${terminalId}`);
+
+    const remainingTerminals = this.dependencies.splitManager.getTerminals().size;
+    const displayManager = this.dependencies.coordinator.getDisplayModeManager?.();
+    const currentMode = displayManager?.getCurrentMode?.() ?? 'normal';
+
+    terminalLogger.info(
+      `🔧 [CLEANUP] Current mode: ${currentMode}, remaining: ${remainingTerminals}`
+    );
+
+    if (remainingTerminals <= 1) {
+      containerManager.clearSplitArtifacts();
+      terminalLogger.info(
+        `✅ Split artifacts cleared (remaining terminals: ${remainingTerminals})`
+      );
+
+      if (currentMode === 'split' && displayManager && remainingTerminals === 1) {
+        displayManager.setDisplayMode('normal');
+        terminalLogger.info('✅ Switched to normal mode after deletion');
+      }
+    } else if (currentMode === 'split') {
+      this.rebuildSplitLayout(containerManager, remainingTerminals);
+    } else {
+      containerManager.clearSplitArtifacts();
+      terminalLogger.info(`✅ Cleared stray split artifacts in ${currentMode} mode`);
+    }
+  }
+
+  /**
+   * Rebuild the split display layout for the remaining terminals after a removal.
+   */
+  private rebuildSplitLayout(
+    containerManager: ITerminalContainerManager,
+    remainingTerminals: number
+  ): void {
+    const orderedIds = Array.from(this.dependencies.splitManager.getTerminals().keys());
+    const activeId = this.dependencies.coordinator.getActiveTerminalId?.() ?? orderedIds[0] ?? null;
+    const currentLocation =
+      (
+        this.dependencies.splitManager as {
+          getCurrentPanelLocation?: () => 'sidebar' | 'panel';
+        }
+      ).getCurrentPanelLocation?.() || 'sidebar';
+    const splitDirection = this.dependencies.splitManager.getOptimalSplitDirection(currentLocation);
+    containerManager.applyDisplayState({
+      mode: 'split',
+      activeTerminalId: activeId,
+      orderedTerminalIds: orderedIds,
+      splitDirection,
+    });
+    terminalLogger.info(`✅ Split layout rebuilt with ${remainingTerminals} terminals`);
   }
 
   private hasHeaderElementsCache(

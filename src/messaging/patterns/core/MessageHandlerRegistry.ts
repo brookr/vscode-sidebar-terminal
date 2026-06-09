@@ -149,24 +149,9 @@ export class MessageHandlerRegistry {
 
     try {
       // Validate message if requested
-      if (options.validate !== false) {
-        try {
-          this.validator.validate(message);
-        } catch (error) {
-          this.errorCount++;
-          const errorMessage = error instanceof Error ? error.message : String(error);
-
-          if (enableLogging) {
-            this.logger.logValidationError('MessageHandlerRegistry', message, errorMessage);
-          }
-
-          return {
-            success: false,
-            handledBy: 'none',
-            processingTime: Date.now() - startTime,
-            error: `Validation failed: ${errorMessage}`,
-          };
-        }
+      const validationFailure = this.validateMessage(message, options, enableLogging, startTime);
+      if (validationFailure) {
+        return validationFailure;
       }
 
       if (enableLogging) {
@@ -197,58 +182,18 @@ export class MessageHandlerRegistry {
 
       // Try handlers in priority order (Chain of Responsibility)
       for (const entry of candidateEntries) {
-        if (entry.handler.canHandle(message, context)) {
-          const handlerName = entry.handler.getName();
-
-          if (enableLogging) {
-            this.logger.logHandlingStarted('MessageHandlerRegistry', message, handlerName);
-          }
-
-          try {
-            // Execute handler with optional timeout
-            if (options.timeout) {
-              await this.executeWithTimeout(
-                () => entry.handler.handle(message, context),
-                options.timeout
-              );
-            } else {
-              await entry.handler.handle(message, context);
-            }
-
-            const processingTime = Date.now() - startTime;
-            this.commandsHandled++;
-            this.processingTimes.push(processingTime);
-
-            // Keep only last 1000 processing times
-            if (this.processingTimes.length > 1000) {
-              this.processingTimes = this.processingTimes.slice(-1000);
-            }
-
-            if (enableLogging) {
-              this.logger.logHandlingCompleted(
-                'MessageHandlerRegistry',
-                message,
-                handlerName,
-                processingTime
-              );
-            }
-
-            return {
-              success: true,
-              handledBy: handlerName,
-              processingTime,
-            };
-          } catch (error) {
-            this.errorCount++;
-
-            if (enableLogging) {
-              this.logger.logHandlingFailed('MessageHandlerRegistry', message, handlerName, error);
-            }
-
-            // Continue to next handler in chain
-            continue;
-          }
+        if (!entry.handler.canHandle(message, context)) {
+          continue;
         }
+
+        const result = await this.runHandler(entry, message, context, options, {
+          enableLogging,
+          startTime,
+        });
+        if (result) {
+          return result;
+        }
+        // Handler failed; continue to next handler in chain
       }
 
       // No handler could process the message
@@ -283,6 +228,109 @@ export class MessageHandlerRegistry {
         processingTime,
         error: errorMessage,
       };
+    }
+  }
+
+  /**
+   * Validate a message when validation is enabled.
+   *
+   * Returns a failure result when validation fails, or `null` when the message
+   * is valid (or validation was disabled).
+   */
+  private validateMessage(
+    message: WebviewMessage,
+    options: IDispatchOptions,
+    enableLogging: boolean,
+    startTime: number
+  ): IMessageHandlerResult | null {
+    if (options.validate === false) {
+      return null;
+    }
+
+    try {
+      this.validator.validate(message);
+      return null;
+    } catch (error) {
+      this.errorCount++;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+
+      if (enableLogging) {
+        this.logger.logValidationError('MessageHandlerRegistry', message, errorMessage);
+      }
+
+      return {
+        success: false,
+        handledBy: 'none',
+        processingTime: Date.now() - startTime,
+        error: `Validation failed: ${errorMessage}`,
+      };
+    }
+  }
+
+  /**
+   * Run a single candidate handler.
+   *
+   * Returns a success result when the handler completes, or `null` when the
+   * handler throws so the caller can fall through to the next handler in the
+   * chain (preserving the original Chain of Responsibility behavior).
+   */
+  private async runHandler(
+    entry: IHandlerEntry,
+    message: WebviewMessage,
+    context: IMessageHandlerContext,
+    options: IDispatchOptions,
+    state: { enableLogging: boolean; startTime: number }
+  ): Promise<IMessageHandlerResult | null> {
+    const { enableLogging, startTime } = state;
+    const handlerName = entry.handler.getName();
+
+    if (enableLogging) {
+      this.logger.logHandlingStarted('MessageHandlerRegistry', message, handlerName);
+    }
+
+    try {
+      // Execute handler with optional timeout
+      if (options.timeout) {
+        await this.executeWithTimeout(
+          () => entry.handler.handle(message, context),
+          options.timeout
+        );
+      } else {
+        await entry.handler.handle(message, context);
+      }
+
+      const processingTime = Date.now() - startTime;
+      this.commandsHandled++;
+      this.processingTimes.push(processingTime);
+
+      // Keep only last 1000 processing times
+      if (this.processingTimes.length > 1000) {
+        this.processingTimes = this.processingTimes.slice(-1000);
+      }
+
+      if (enableLogging) {
+        this.logger.logHandlingCompleted(
+          'MessageHandlerRegistry',
+          message,
+          handlerName,
+          processingTime
+        );
+      }
+
+      return {
+        success: true,
+        handledBy: handlerName,
+        processingTime,
+      };
+    } catch (error) {
+      this.errorCount++;
+
+      if (enableLogging) {
+        this.logger.logHandlingFailed('MessageHandlerRegistry', message, handlerName, error);
+      }
+
+      // Continue to next handler in chain
+      return null;
     }
   }
 

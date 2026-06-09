@@ -453,7 +453,10 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
     switch (message.command) {
       case 'updateShellStatus':
         if ('terminalId' in message && 'status' in message) {
-          this.updateShellStatus(message.terminalId as string, message.status as any);
+          this.updateShellStatus(
+            message.terminalId as string,
+            message.status as 'ready' | 'executing' | 'success' | 'error'
+          );
         }
         break;
 
@@ -465,7 +468,10 @@ export class ShellIntegrationManager implements IShellIntegrationEvents {
 
       case 'commandHistory':
         if ('terminalId' in message && 'history' in message) {
-          this.showCommandHistory(message.terminalId as string, message.history as any);
+          this.showCommandHistory(
+            message.terminalId as string,
+            message.history as Array<{ command: string; exitCode?: number; duration?: number }>
+          );
         }
         break;
     }

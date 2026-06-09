@@ -11,6 +11,7 @@
 
 import * as vscode from 'vscode';
 import { ShellIntegrationService } from './ShellIntegrationService';
+import { TerminalManager } from '../terminals/TerminalManager';
 import { SecondaryTerminalProvider } from '../providers/SecondaryTerminalProvider';
 import { terminal as log } from '../utils/logger';
 import { safeProcessCwd } from '../utils/common';
@@ -48,7 +49,7 @@ export class EnhancedShellIntegrationService extends ShellIntegrationService {
   public readonly onStatusUpdate = this._statusEmitter.event;
   public readonly onCommandHistoryUpdate = this._commandHistoryEmitter.event;
 
-  constructor(terminalManager: any, context?: vscode.ExtensionContext) {
+  constructor(terminalManager: TerminalManager, context?: vscode.ExtensionContext) {
     super(terminalManager, context);
     this.setupAdvancedPatterns();
   }

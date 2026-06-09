@@ -38,6 +38,7 @@ export class SessionLifecycleManager {
     }
 
     // Periodic backup save every 5 minutes
+    // eslint-disable-next-line no-restricted-syntax -- timer is stored and cleared via the disposable pushed to context.subscriptions below
     const saveOnTerminalChange = setInterval(() => {
       void this.saveSessionPeriodically();
     }, 300000);

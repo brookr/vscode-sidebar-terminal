@@ -203,15 +203,7 @@ export class FileReferenceCommand {
         // TabInputTextのみを対象（テキストファイル）
         if (tab.input instanceof vscode.TabInputText) {
           const fullPath = tab.input.uri.fsPath;
-
-          // 相対パスを計算
-          let relativePath = fullPath;
-          if (workspaceRoot && fullPath.startsWith(workspaceRoot)) {
-            relativePath = fullPath.substring(workspaceRoot.length);
-            if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
-              relativePath = relativePath.substring(1);
-            }
-          }
+          const relativePath = this.toRelativePath(fullPath, workspaceRoot);
 
           // 重複を避ける
           if (!openFiles.includes(relativePath)) {
@@ -223,6 +215,20 @@ export class FileReferenceCommand {
 
     log(`🔍 [DEBUG] Found ${openFiles.length} open files`);
     return openFiles;
+  }
+
+  /**
+   * ワークスペースルートからの相対パスを計算
+   */
+  private toRelativePath(fullPath: string, workspaceRoot: string): string {
+    if (!workspaceRoot || !fullPath.startsWith(workspaceRoot)) {
+      return fullPath;
+    }
+    let relativePath = fullPath.substring(workspaceRoot.length);
+    if (relativePath.startsWith('/') || relativePath.startsWith('\\')) {
+      relativePath = relativePath.substring(1);
+    }
+    return relativePath;
   }
 
   /**

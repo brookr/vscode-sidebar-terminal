@@ -176,6 +176,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
     // Setup message listener for incoming messages
     if (typeof window !== 'undefined') {
       this.messageEventHandler = this.handleIncomingMessage.bind(this);
+      // eslint-disable-next-line no-restricted-syntax -- handler reference stored in this.messageEventHandler and removed via removeEventListener in dispose()
       window.addEventListener('message', this.messageEventHandler);
     }
 
@@ -591,6 +592,7 @@ export class UnifiedMessageDispatcher implements IManagerLifecycle, Disposable {
    * Check if dispatcher is ready
    */
   isReady(): boolean {
+    // eslint-disable-next-line eqeqeq -- intentional null+undefined check; vscodeApi/coordinator are optional and may be undefined
     return !this.disposed && (this.vscodeApi != null || this.coordinator != null);
   }
 

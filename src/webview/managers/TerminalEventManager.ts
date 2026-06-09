@@ -158,7 +158,7 @@ export class TerminalEventManager extends BaseManager {
       }
 
       // VS Code standard: Click activates terminal only if no text is selected
-      const clickHandler = (_event: Event) => {
+      const clickHandler = (_event: Event): void => {
         try {
           if (!terminal.hasSelection()) {
             terminalLogger.debug(
@@ -201,11 +201,11 @@ export class TerminalEventManager extends BaseManager {
       }
 
       // Track focus state to avoid redundant focus operations
-      const focusHandler = () => {
+      const focusHandler = (): void => {
         terminalLogger.debug(`🎯 Terminal focused: ${terminalId}`);
       };
 
-      const blurHandler = () => {
+      const blurHandler = (): void => {
         terminalLogger.debug(`🎯 Terminal blurred: ${terminalId}`);
       };
 
@@ -309,7 +309,7 @@ export class TerminalEventManager extends BaseManager {
         return;
       }
 
-      const wheelHandler = (event: WheelEvent) => {
+      const wheelHandler = (event: WheelEvent): void => {
         try {
           if (onWheel) {
             onWheel(event);
@@ -344,7 +344,7 @@ export class TerminalEventManager extends BaseManager {
     onKey?: (event: KeyboardEvent) => void
   ): void {
     try {
-      const keyHandler = (event: KeyboardEvent) => {
+      const keyHandler = (event: KeyboardEvent): void => {
         try {
           if (onKey) {
             onKey(event);
@@ -392,7 +392,7 @@ export class TerminalEventManager extends BaseManager {
       }
 
       if (handlers?.onMouseEnter) {
-        const enterHandler = (event: MouseEvent) => handlers.onMouseEnter!(event);
+        const enterHandler = (event: MouseEvent): void => handlers.onMouseEnter!(event);
         xtermElement.addEventListener('mouseenter', enterHandler as EventListener);
         this.eventRegistry.register(
           `terminal-${terminalId}-mouseenter`,
@@ -403,7 +403,7 @@ export class TerminalEventManager extends BaseManager {
       }
 
       if (handlers?.onMouseLeave) {
-        const leaveHandler = (event: MouseEvent) => handlers.onMouseLeave!(event);
+        const leaveHandler = (event: MouseEvent): void => handlers.onMouseLeave!(event);
         xtermElement.addEventListener('mouseleave', leaveHandler as EventListener);
         this.eventRegistry.register(
           `terminal-${terminalId}-mouseleave`,
@@ -414,7 +414,7 @@ export class TerminalEventManager extends BaseManager {
       }
 
       if (handlers?.onMouseMove) {
-        const moveHandler = (event: MouseEvent) => handlers.onMouseMove!(event);
+        const moveHandler = (event: MouseEvent): void => handlers.onMouseMove!(event);
         xtermElement.addEventListener('mousemove', moveHandler as EventListener);
         this.eventRegistry.register(
           `terminal-${terminalId}-mousemove`,

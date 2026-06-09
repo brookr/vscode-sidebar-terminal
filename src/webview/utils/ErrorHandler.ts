@@ -222,7 +222,8 @@ export class ErrorHandler {
    */
   public static isErrorType<T extends Error>(
     error: unknown,
-    errorType: new (...args: any[]) => T
+    // never[] params make any concrete Error constructor assignable; only used for instanceof.
+    errorType: new (...args: never[]) => T
   ): error is T {
     return error instanceof errorType;
   }

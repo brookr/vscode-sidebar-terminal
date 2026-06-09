@@ -9,13 +9,13 @@
  * @see openspec/changes/refactor-terminal-foundation/specs/unify-addon-loading/spec.md
  */
 
-import { Terminal } from '@xterm/xterm';
+import { Terminal, ITerminalAddon } from '@xterm/xterm';
 import { terminalLogger } from './ManagerLogger';
 
 /**
  * Addon constructor type - any class that can be instantiated and loaded
  */
-type AddonConstructor<T> = new (...args: any[]) => T;
+type AddonConstructor<T> = new (...args: never[]) => T;
 
 /**
  * Options for addon loading behavior
@@ -34,7 +34,7 @@ interface AddonLoadOptions {
   /**
    * Post-load initialization callback for special setup (e.g., Unicode11Addon)
    */
-  onLoaded?: (addon: any, terminal: Terminal) => void;
+  onLoaded?: (addon: ITerminalAddon, terminal: Terminal) => void;
 }
 
 /**
@@ -96,11 +96,11 @@ export class AddonLoader {
       const addon = new AddonClass();
 
       // Load into terminal
-      terminal.loadAddon(addon as any);
+      terminal.loadAddon(addon as unknown as ITerminalAddon);
 
       // Execute post-load initialization if provided
       if (onLoaded) {
-        onLoaded(addon, terminal);
+        onLoaded(addon as unknown as ITerminalAddon, terminal);
       }
 
       // Log success
@@ -171,10 +171,10 @@ export class AddonLoader {
     terminal: Terminal,
     terminalId: string,
     addons: Array<{
-      AddonClass: AddonConstructor<any>;
+      AddonClass: AddonConstructor<ITerminalAddon>;
       options?: AddonLoadOptions;
     }>
-  ): Promise<Map<string, any>> {
+  ): Promise<Map<string, ITerminalAddon>> {
     const results = await Promise.all(
       addons.map(async ({ AddonClass, options }) => {
         const addon = await this.loadAddon(terminal, terminalId, AddonClass, options);
@@ -183,7 +183,7 @@ export class AddonLoader {
       })
     );
 
-    const addonMap = new Map<string, any>();
+    const addonMap = new Map<string, ITerminalAddon>();
     for (const { name, addon } of results) {
       if (addon !== undefined) {
         addonMap.set(name, addon);

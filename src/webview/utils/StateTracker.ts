@@ -261,6 +261,7 @@ export class StateTracker<T> {
   private startCleanupTimer(): void {
     // Run cleanup at half the TTL interval for responsive expiration
     const interval = Math.max(1000, (this.options.ttlMs ?? 0) / 2);
+    // eslint-disable-next-line no-restricted-syntax -- stored in this.cleanupTimer and cleared in dispose()
     this.cleanupTimer = setInterval(() => {
       this.cleanupExpired();
     }, interval);

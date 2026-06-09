@@ -14,6 +14,7 @@ import { TerminalTabManager } from '../managers/TerminalTabManager';
 import { InputManager } from '../managers/InputManager';
 import { ConfigManager } from '../managers/ConfigManager';
 import { WebViewPersistenceService } from '../services/WebViewPersistenceService';
+import { FontSettingsService } from '../services/FontSettingsService';
 import { ConsolidatedMessageManager } from '../managers/ConsolidatedMessageManager';
 import { TerminalStateDisplayManager } from '../managers/TerminalStateDisplayManager';
 import { SessionRestoreManager } from '../managers/SessionRestoreManager';
@@ -42,10 +43,6 @@ interface IDebugPanelManagerDependencies {
     forceSynchronization: () => void;
     requestLatestState: () => void;
   }): void;
-}
-
-interface IFontSettingsServiceDependencies {
-  setApplicator(applicator: UIManager): void;
 }
 
 interface IEventHandlerManagerDependencies {
@@ -92,7 +89,7 @@ export interface ILightweightTerminalInitializationDependencies {
   displayModeManager: IDisplayModeManagerDependencies;
   terminalContainerManager: ITerminalContainerManagerDependencies;
   debugPanelManager: IDebugPanelManagerDependencies;
-  fontSettingsService: IFontSettingsServiceDependencies;
+  fontSettingsService: FontSettingsService;
   eventHandlerManager: IEventHandlerManagerDependencies;
   scheduleTimeout(handler: TimerHandler, timeout?: number): number;
   settingsVersionInfo(): string;
@@ -152,7 +149,7 @@ export class LightweightTerminalInitializationCoordinator {
     inputManager.initialize();
 
     const configManager = new ConfigManager();
-    configManager.setFontSettingsService(this.dependencies.fontSettingsService as any);
+    configManager.setFontSettingsService(this.dependencies.fontSettingsService);
 
     const webViewPersistenceService = new WebViewPersistenceService();
     const messageManager = new ConsolidatedMessageManager();
@@ -240,7 +237,7 @@ export class LightweightTerminalInitializationCoordinator {
       this.dependencies.managerCoordinator.openSettings();
     });
 
-    const onWindowFocus = () => {
+    const onWindowFocus = (): void => {
       this.dependencies.postMessageToExtension({
         command: 'terminalFocused',
         terminalId: this.dependencies.getActiveTerminalId() || '',
@@ -248,7 +245,7 @@ export class LightweightTerminalInitializationCoordinator {
       });
     };
 
-    const onWindowBlur = () => {
+    const onWindowBlur = (): void => {
       this.dependencies.postMessageToExtension({
         command: 'terminalBlurred',
         terminalId: this.dependencies.getActiveTerminalId() || '',
@@ -256,7 +253,9 @@ export class LightweightTerminalInitializationCoordinator {
       });
     };
 
+    // eslint-disable-next-line no-restricted-syntax -- handler is returned to the caller, which stores it and calls removeEventListener('focus', ...) on dispose
     window.addEventListener('focus', onWindowFocus);
+    // eslint-disable-next-line no-restricted-syntax -- handler is returned to the caller, which stores it and calls removeEventListener('blur', ...) on dispose
     window.addEventListener('blur', onWindowBlur);
 
     this.dependencies.eventHandlerManager.onPageUnload(() => {

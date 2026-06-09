@@ -196,7 +196,11 @@ export class MessageRouter {
   /**
    * Validate message data
    */
-  private validateMessageData(command: string, data: any): boolean {
+  private validateMessageData(command: string, data: unknown): boolean {
+    const record = (data && typeof data === 'object' ? data : undefined) as
+      | Record<string, unknown>
+      | undefined;
+
     // Basic validation - can be extended with more sophisticated validation
     switch (command) {
       case 'createTerminal':
@@ -205,14 +209,16 @@ export class MessageRouter {
         return typeof data === 'object';
 
       case 'terminalInput':
-        return data && typeof data.terminalId === 'string' && typeof data.input === 'string';
+        return (
+          !!record && typeof record.terminalId === 'string' && typeof record.input === 'string'
+        );
 
       case 'terminalResize':
         return (
-          data &&
-          typeof data.terminalId === 'string' &&
-          typeof data.cols === 'number' &&
-          typeof data.rows === 'number'
+          !!record &&
+          typeof record.terminalId === 'string' &&
+          typeof record.cols === 'number' &&
+          typeof record.rows === 'number'
         );
 
       default:
@@ -277,10 +283,10 @@ export class MessageRouterFactory {
 /**
  * Abstract base class for message handlers
  */
-export abstract class BaseMessageHandler<TData = any, TResponse = any> implements MessageHandler<
-  TData,
-  TResponse
-> {
+export abstract class BaseMessageHandler<
+  TData = unknown,
+  TResponse = unknown,
+> implements MessageHandler<TData, TResponse> {
   protected readonly handlerName: string;
 
   constructor(handlerName: string) {
@@ -293,9 +299,10 @@ export abstract class BaseMessageHandler<TData = any, TResponse = any> implement
     log(`[${this.handlerName}] ${message}`);
   }
 
-  protected validateRequired(data: any, fields: string[]): void {
+  protected validateRequired<T extends object>(data: T, fields: string[]): void {
+    const record = data as Record<string, unknown>;
     for (const field of fields) {
-      if (!(field in data) || data[field] === undefined || data[field] === null) {
+      if (!(field in record) || record[field] === undefined || record[field] === null) {
         throw new Error(`Required field '${field}' is missing or null`);
       }
     }

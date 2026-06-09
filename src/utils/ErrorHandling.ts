@@ -296,7 +296,11 @@ export class ErrorHandlingManager {
         (stats.byCategory[report.context.category] || 0) + 1;
       stats.bySeverity[report.context.severity] =
         (stats.bySeverity[report.context.severity] || 0) + 1;
-      report.recoverable ? stats.recoverable++ : stats.unrecoverable++;
+      if (report.recoverable) {
+        stats.recoverable++;
+      } else {
+        stats.unrecoverable++;
+      }
     });
 
     return stats;
@@ -331,20 +335,23 @@ export function isRecoverableError(error: unknown): boolean {
 
 export function withErrorHandling(category: ErrorCategory, component: string, recoverable = true) {
   return function (
-    target: any,
+    _target: object,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ): PropertyDescriptor {
-    const originalMethod = descriptor.value;
+    const originalMethod = descriptor.value as (...args: unknown[]) => unknown;
 
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
       const manager = ErrorHandlingManager.getInstance();
-      return manager.executeWithErrorHandling(() => originalMethod.apply(this, args), {
-        category,
-        component,
-        operation: propertyKey,
-        severity: recoverable ? ErrorSeverity.ERROR : ErrorSeverity.CRITICAL,
-      });
+      return manager.executeWithErrorHandling(
+        () => Promise.resolve(originalMethod.apply(this, args)),
+        {
+          category,
+          component,
+          operation: propertyKey,
+          severity: recoverable ? ErrorSeverity.ERROR : ErrorSeverity.CRITICAL,
+        }
+      );
     };
 
     return descriptor;

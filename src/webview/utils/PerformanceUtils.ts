@@ -268,3 +268,4 @@ export namespace PerformanceUtils {
     return -1;
   }
 }
+/* eslint-enable @typescript-eslint/no-namespace */

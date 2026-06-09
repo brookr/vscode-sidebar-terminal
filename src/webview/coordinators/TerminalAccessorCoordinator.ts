@@ -47,7 +47,9 @@ export class TerminalAccessorCoordinator {
     return this.deps.getTerminalInstance(terminalId);
   }
 
-  public getSerializeAddon(terminalId: string) {
+  public getSerializeAddon(
+    terminalId: string
+  ): import('@xterm/addon-serialize').SerializeAddon | undefined {
     return this.deps.getTerminalInstance(terminalId)?.serializeAddon;
   }
 
@@ -83,7 +85,7 @@ export class TerminalAccessorCoordinator {
     return this.deps.splitManager;
   }
 
-  public getTerminal() {
+  public getTerminal(): import('@xterm/xterm').Terminal | null {
     const activeId = this.deps.getActiveTerminalId();
     if (!activeId) {
       return null;
@@ -92,7 +94,7 @@ export class TerminalAccessorCoordinator {
     return this.deps.getTerminalInstance(activeId)?.terminal ?? null;
   }
 
-  public getFitAddon() {
+  public getFitAddon(): import('@xterm/addon-fit').FitAddon | null {
     const activeId = this.deps.getActiveTerminalId();
     if (!activeId) {
       return null;

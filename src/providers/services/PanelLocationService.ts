@@ -313,6 +313,7 @@ export class PanelLocationService implements vscode.Disposable {
    */
   private _setupConfigurationListener(): void {
     this._disposables.push(
+      // eslint-disable-next-line no-restricted-syntax -- pushed to _disposables and released in dispose()
       vscode.workspace.onDidChangeConfiguration((event) => {
         if (event.affectsConfiguration('secondaryTerminal.panelLocation')) {
           log('📍 [PANEL-DETECTION] Panel location setting changed - requesting detection');

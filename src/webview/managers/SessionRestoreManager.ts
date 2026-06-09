@@ -136,37 +136,13 @@ export class SessionRestoreManager {
       }
 
       const terminal = terminalInstance.terminal;
-      let linesRestored = 0;
 
-      // 2. Clear existing content (only if we're actually restoring data)
-      if (scrollbackData && scrollbackData.length > 0) {
-        terminal.clear();
-      }
-
-      // 3. Restore session restore message if available
-      if (sessionRestoreMessage) {
-        terminal.writeln(sessionRestoreMessage);
-        log(`[RESTORATION] Restored session message for terminal: ${terminalId}`);
-      }
-
-      // 4. Restore scrollback data if available
-      if (scrollbackData && scrollbackData.length > 0) {
-        log(
-          `[RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
-        );
-
-        // Write each line to restore scrollback history
-        for (const line of scrollbackData) {
-          if (line.trim()) {
-            terminal.writeln(line);
-            linesRestored++;
-          }
-        }
-
-        log(
-          `[RESTORATION] Scrollback restored for terminal: ${terminalId} (${linesRestored} lines)`
-        );
-      }
+      const linesRestored = this.writeRestoredContent(
+        terminal,
+        terminalId,
+        scrollbackData,
+        sessionRestoreMessage
+      );
 
       // Mark as processed to prevent duplicate restoration
       this.processedScrollbackRequests.add(terminalId);
@@ -194,6 +170,53 @@ export class SessionRestoreManager {
         reason: error instanceof Error ? error.message : 'unknown_error',
       };
     }
+  }
+
+  /**
+   * Write the restore message and scrollback history into the terminal.
+   *
+   * Mirrors steps 2-4 of the restore flow: clear existing content when there
+   * is scrollback to restore, write the optional restore message, then replay
+   * each non-empty scrollback line. Returns the number of lines restored.
+   */
+  private writeRestoredContent(
+    terminal: import('@xterm/xterm').Terminal,
+    terminalId: string,
+    scrollbackData: string[] | undefined,
+    sessionRestoreMessage: string | undefined
+  ): number {
+    const hasScrollback = Boolean(scrollbackData && scrollbackData.length > 0);
+
+    // 2. Clear existing content (only if we're actually restoring data)
+    if (hasScrollback) {
+      terminal.clear();
+    }
+
+    // 3. Restore session restore message if available
+    if (sessionRestoreMessage) {
+      terminal.writeln(sessionRestoreMessage);
+      log(`[RESTORATION] Restored session message for terminal: ${terminalId}`);
+    }
+
+    // 4. Restore scrollback data if available
+    let linesRestored = 0;
+    if (hasScrollback && scrollbackData) {
+      log(
+        `[RESTORATION] Restoring ${scrollbackData.length} lines of scrollback for terminal: ${terminalId}`
+      );
+
+      // Write each line to restore scrollback history
+      for (const line of scrollbackData) {
+        if (line.trim()) {
+          terminal.writeln(line);
+          linesRestored++;
+        }
+      }
+
+      log(`[RESTORATION] Scrollback restored for terminal: ${terminalId} (${linesRestored} lines)`);
+    }
+
+    return linesRestored;
   }
 
   /**

@@ -7,6 +7,7 @@
 
 import * as vscode from 'vscode';
 import { WebviewMessage } from '../../types/common';
+import { AgentType } from '../../types/shared';
 import { TerminalManager } from '../../terminals/TerminalManager';
 import { safeProcessCwd } from '../../utils/common';
 import { TerminalErrorHandler } from '../../utils/feedback';
@@ -316,7 +317,7 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    const nextName = (message as any)?.newName;
+    const nextName = message.newName;
     if (typeof nextName !== 'string' || nextName.trim().length === 0) {
       log('⚠️ [HANDLER] renameTerminal called without valid newName');
       return;
@@ -422,7 +423,7 @@ export class TerminalCommandHandlers {
    * Handle copy to clipboard command
    */
   public async handleCopyToClipboard(message: WebviewMessage): Promise<void> {
-    const text = (message as any)?.text;
+    const text = message.text;
     if (typeof text !== 'string' || text.length === 0) {
       log('⚠️ [HANDLER] copyToClipboard called without text');
       return;
@@ -448,8 +449,10 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    const imageData = (message as any)?.imageData as string;
-    const imageType = (message as any)?.imageType as string;
+    const { imageData, imageType } = message as WebviewMessage & {
+      imageData?: string;
+      imageType?: string;
+    };
 
     if (!imageData || !imageType) {
       log('⚠️ [HANDLER] pasteImage missing imageData or imageType');
@@ -518,7 +521,7 @@ export class TerminalCommandHandlers {
    */
   public async handleSwitchAiAgent(message: WebviewMessage): Promise<void> {
     const terminalId = message.terminalId;
-    const action = (message as any)?.action || 'activate';
+    const action = message.action || 'activate';
 
     log(`📎 [HANDLER] switchAiAgent received: terminalId=${terminalId}, action=${action}`);
 
@@ -528,8 +531,8 @@ export class TerminalCommandHandlers {
     }
 
     try {
-      const forceReconnect = action === 'force-reconnect' || (message as any)?.forceReconnect;
-      const agentType = (message as any)?.agentType || 'claude';
+      const forceReconnect = action === 'force-reconnect' || message.forceReconnect;
+      const agentType: AgentType = (message.agentType as AgentType) || 'claude';
 
       let result: {
         success: boolean;
@@ -595,7 +598,7 @@ export class TerminalCommandHandlers {
       return;
     }
 
-    const text = (message as any)?.text;
+    const text = message.text;
     if (typeof text !== 'string' || text.length === 0) {
       log('⚠️ [HANDLER] pasteText called without text');
       return;
@@ -638,10 +641,12 @@ export class TerminalCommandHandlers {
 
     const terminals = this.deps.terminalManager.getTerminals();
     for (const terminal of terminals) {
+      const overrideCapable = this.deps.terminalManager as TerminalManager & {
+        consumeCreationDisplayModeOverride?: (terminalId: string) => unknown;
+      };
       const displayModeOverride =
-        'consumeCreationDisplayModeOverride' in this.deps.terminalManager &&
-        typeof (this.deps.terminalManager as any).consumeCreationDisplayModeOverride === 'function'
-          ? (this.deps.terminalManager as any).consumeCreationDisplayModeOverride(terminal.id)
+        typeof overrideCapable.consumeCreationDisplayModeOverride === 'function'
+          ? overrideCapable.consumeCreationDisplayModeOverride(terminal.id)
           : null;
       await this.deps.communicationService.sendMessage({
         command: 'terminalCreated',

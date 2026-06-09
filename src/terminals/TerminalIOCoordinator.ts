@@ -172,6 +172,7 @@ export class TerminalIOCoordinator {
     const primary = terminal.ptyProcess;
     // Try alternative PTY instances (excluding the primary that already failed)
     const alternatives = [terminal.ptyProcess, terminal.pty].filter(
+      // eslint-disable-next-line eqeqeq -- intentional null+undefined check to exclude both unset PTY references
       (p): p is NonNullable<typeof p> => p != null && p !== primary
     );
 

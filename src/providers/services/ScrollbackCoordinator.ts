@@ -13,6 +13,7 @@ import { WebviewMessage } from '../../types/common';
  */
 interface ScrollbackDataResponse {
   command: string;
+  requestId?: string;
   terminalId?: string;
   scrollbackData?: string[];
   error?: string;
@@ -127,7 +128,7 @@ export class ScrollbackCoordinator implements Disposable {
    * Handle scrollback data response from WebView
    */
   public handleScrollbackDataResponse(message: ScrollbackDataResponse): void {
-    const requestId = (message as any).requestId;
+    const requestId = message.requestId;
     if (!requestId) {
       log('⚠️ [SCROLLBACK-COORDINATOR] Scrollback response missing requestId');
       return;

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { provider as log } from '../../utils/logger';
 import { WebViewHtmlGenerationService } from '../../services/webview/WebViewHtmlGenerationService';
 import { TerminalErrorHandler } from '../../utils/feedback';
+import { DisposableStore } from '../../utils/DisposableStore';
 
 /**
  * Performance metrics for WebView lifecycle operations
@@ -52,6 +53,11 @@ export class WebViewLifecycleManager implements vscode.Disposable {
    */
   private _onVisibleCallback?: () => void;
   private _onHiddenCallback?: () => void;
+
+  /**
+   * Tracks event subscriptions owned by this manager for disposal
+   */
+  private readonly _disposables = new DisposableStore();
 
   constructor(
     private readonly _extensionContext: vscode.ExtensionContext,
@@ -228,15 +234,18 @@ export class WebViewLifecycleManager implements vscode.Disposable {
     this._onVisibleCallback = onVisible;
     this._onHiddenCallback = onHidden;
 
-    const disposable = webviewView.onDidChangeVisibility(() => {
-      if (webviewView.visible) {
-        log('👁️ [LIFECYCLE] WebView became visible');
-        this._onVisibleCallback?.();
-      } else {
-        log('🙈 [LIFECYCLE] WebView became hidden');
-        this._onHiddenCallback?.();
-      }
-    });
+    const disposable = this._disposables.add(
+      // eslint-disable-next-line no-restricted-syntax -- subscription is tracked in this._disposables and disposed in dispose()
+      webviewView.onDidChangeVisibility(() => {
+        if (webviewView.visible) {
+          log('👁️ [LIFECYCLE] WebView became visible');
+          this._onVisibleCallback?.();
+        } else {
+          log('🙈 [LIFECYCLE] WebView became hidden');
+          this._onHiddenCallback?.();
+        }
+      })
+    );
 
     log('✅ [LIFECYCLE] Visibility listener registered');
     return disposable;
@@ -348,6 +357,9 @@ export class WebViewLifecycleManager implements vscode.Disposable {
     this._htmlSet = false;
     this._bodyRendered = false;
     this._messageListenerRegistered = false;
+
+    // Dispose tracked event subscriptions
+    this._disposables.dispose();
 
     log('✅ [LIFECYCLE] WebViewLifecycleManager disposed');
   }

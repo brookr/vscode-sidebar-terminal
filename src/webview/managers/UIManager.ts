@@ -7,7 +7,7 @@
  * - CliAgentStatusService: CLI Agent status display
  */
 
-import { Terminal } from '@xterm/xterm';
+import { Terminal, FontWeight } from '@xterm/xterm';
 import { PartialTerminalSettings, WebViewFontSettings, ActiveBorderMode } from '../../types/shared';
 import {
   getWebviewTheme,
@@ -479,10 +479,10 @@ export class UIManager extends BaseManager implements IUIManager {
 
     // Apply additional VS Code standard font settings if provided
     if (fontSettings.fontWeight !== undefined) {
-      terminal.options.fontWeight = fontSettings.fontWeight as any;
+      terminal.options.fontWeight = fontSettings.fontWeight as FontWeight;
     }
     if (fontSettings.fontWeightBold !== undefined) {
-      terminal.options.fontWeightBold = fontSettings.fontWeightBold as any;
+      terminal.options.fontWeightBold = fontSettings.fontWeightBold as FontWeight;
     }
     if (fontSettings.lineHeight !== undefined) {
       terminal.options.lineHeight = fontSettings.lineHeight;

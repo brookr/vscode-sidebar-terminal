@@ -40,17 +40,18 @@ export class InputManager extends BaseManager implements IInputManager {
   private readonly coordinator: IManagerCoordinator;
 
   // New architecture services
-  private stateManager: InputStateManager;
-  private eventService: InputEventService;
-  private keybindingService: KeybindingService;
-  private terminalOperationsService: TerminalOperationsService;
-  private vsCodeCommandDispatcher: VSCodeCommandDispatcher;
-  private altClickCoordinator: AltClickCoordinator;
-  private inputFlushingService: InputFlushingService;
-  private panelNavigationHandler: PanelNavigationHandler;
-  private terminalClipboardHandler: TerminalClipboardHandler;
-  private keyboardShortcutSetupHandler: KeyboardShortcutSetupHandler;
-  private specialKeysHandler: SpecialKeysHandler;
+  // Assigned in initializeInputServices()/initializeInputHandlers(), invoked from the constructor.
+  private stateManager!: InputStateManager;
+  private eventService!: InputEventService;
+  private keybindingService!: KeybindingService;
+  private terminalOperationsService!: TerminalOperationsService;
+  private vsCodeCommandDispatcher!: VSCodeCommandDispatcher;
+  private altClickCoordinator!: AltClickCoordinator;
+  private inputFlushingService!: InputFlushingService;
+  private panelNavigationHandler!: PanelNavigationHandler;
+  private terminalClipboardHandler!: TerminalClipboardHandler;
+  private keyboardShortcutSetupHandler!: KeyboardShortcutSetupHandler;
+  private specialKeysHandler!: SpecialKeysHandler;
 
   constructor(coordinator: IManagerCoordinator) {
     super('InputManager', {
@@ -61,6 +62,14 @@ export class InputManager extends BaseManager implements IInputManager {
 
     this.coordinator = coordinator;
 
+    this.initializeInputServices();
+    this.initializeInputHandlers();
+
+    this.logger('initialization', 'starting');
+  }
+
+  /** Constructs the core input services (state, events, keybindings, clipboard, dispatch, flushing). */
+  private initializeInputServices(): void {
     // Initialize new architecture services
     this.stateManager = new InputStateManager((message: string) => this.logger(message));
     this.eventService = new InputEventService((message: string) => this.logger(message));
@@ -119,7 +128,10 @@ export class InputManager extends BaseManager implements IInputManager {
         });
       },
     });
+  }
 
+  /** Constructs the input handlers (alt-click, panel nav, special keys, shortcuts, IME). */
+  private initializeInputHandlers(): void {
     // Initialize AltClickCoordinator
     this.altClickCoordinator = new AltClickCoordinator({
       logger: (message: string) => this.logger(message),
@@ -184,12 +196,11 @@ export class InputManager extends BaseManager implements IInputManager {
       this.stateManager,
       this.eventService
     );
-
-    this.logger('initialization', 'starting');
   }
 
   // IME Handler for composition events
-  private imeHandler: IIMEHandler;
+  // Assigned in initializeInputHandlers(), invoked from the constructor.
+  private imeHandler!: IIMEHandler;
 
   // Debounce timers for events
   private eventDebounceTimers = new Map<string, number>();
@@ -298,6 +309,24 @@ export class InputManager extends BaseManager implements IInputManager {
 
     const disposables: Array<{ dispose(): void }> = [];
 
+    this.registerXtermInputHandlers(terminal, terminalId, container, disposables);
+
+    // Save disposables for terminal-specific cleanup
+    this.terminalDisposables.set(terminalId, disposables);
+
+    this.registerTerminalFocusHandlers(terminalId, container, manager, disposables);
+    this.registerTerminalActivationHandlers(terminal, terminalId, container, manager);
+
+    this.logger(`Complete input handling configured for terminal ${terminalId}`);
+  }
+
+  /** Registers xterm.js key/data and IME composition handlers, pushing disposables for cleanup. */
+  private registerXtermInputHandlers(
+    terminal: Terminal,
+    terminalId: string,
+    container: HTMLElement,
+    disposables: Array<{ dispose(): void }>
+  ): void {
     // CRITICAL: Set up keyboard input handling with IME awareness
     // Use onKey for regular keyboard input (non-IME)
     const onKeyDisposable = terminal.onKey((event: { key: string; domEvent: KeyboardEvent }) => {
@@ -353,10 +382,15 @@ export class InputManager extends BaseManager implements IInputManager {
       },
     };
     disposables.push(compositionEndDisposable);
+  }
 
-    // Save disposables for terminal-specific cleanup
-    this.terminalDisposables.set(terminalId, disposables);
-
+  /** Registers focusin/focusout handlers that notify the extension of terminal focus changes. */
+  private registerTerminalFocusHandlers(
+    terminalId: string,
+    container: HTMLElement,
+    manager: IManagerCoordinator,
+    disposables: Array<{ dispose(): void }>
+  ): void {
     // Focus/blur handling via DOM events on the terminal container
     // Sends terminalFocused/terminalBlurred messages to extension for context key management
     const focusInHandler = (): void => {
@@ -386,7 +420,15 @@ export class InputManager extends BaseManager implements IInputManager {
         container.removeEventListener('focusout', focusOutHandler);
       },
     });
+  }
 
+  /** Registers click/pointerdown handlers for terminal activation and Alt+Click cursor movement. */
+  private registerTerminalActivationHandlers(
+    terminal: Terminal,
+    terminalId: string,
+    container: HTMLElement,
+    manager: IManagerCoordinator
+  ): void {
     const shouldIgnoreActivationTarget = (event: MouseEvent | PointerEvent): boolean => {
       const target = event.target as HTMLElement | null;
       return Boolean(target?.closest('.terminal-control') || target?.closest('.terminal-header'));
@@ -456,8 +498,6 @@ export class InputManager extends BaseManager implements IInputManager {
       pointerDownHandler as EventListener,
       { capture: true }
     );
-
-    this.logger(`Complete input handling configured for terminal ${terminalId}`);
   }
 
   /**

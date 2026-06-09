@@ -81,7 +81,7 @@ export class CommandRegistrar {
 
     // Register all commands with telemetry tracking
     commandDisposables.forEach(({ command, handler }) => {
-      const wrappedHandler = async (...args: unknown[]) => {
+      const wrappedHandler = async (...args: unknown[]): Promise<unknown> => {
         try {
           this.deps.telemetryService?.trackCommandExecuted(command, true);
           return await handler(...args);

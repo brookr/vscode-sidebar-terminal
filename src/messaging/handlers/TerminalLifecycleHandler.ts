@@ -196,7 +196,7 @@ export class TerminalLifecycleHandler extends BaseMessageHandler {
           'showWarning' in notificationManager &&
           typeof notificationManager.showWarning === 'function'
         ) {
-          (notificationManager as any).showWarning(reason || 'Terminal deletion failed');
+          notificationManager.showWarning(reason || 'Terminal deletion failed');
         }
       }
     } else {

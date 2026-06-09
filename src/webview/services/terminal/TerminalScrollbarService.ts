@@ -80,6 +80,10 @@ export class TerminalScrollbarService {
    * Get VS Code standard scrollbar stylesheet
    */
   private getScrollbarStylesheet(): string {
+    return this.getLayoutStylesheet() + this.getScrollbarChromeStylesheet();
+  }
+
+  private getLayoutStylesheet(): string {
     return `
       /* VS Code Terminal - Full Display Area Implementation */
       .terminal-container {
@@ -152,7 +156,11 @@ export class TerminalScrollbarService {
         top: initial !important;
         left: initial !important;
       }
+`;
+  }
 
+  private getScrollbarChromeStylesheet(): string {
+    return `
       /* VS Code Standard Scrollbar Styling - 14px width */
       .terminal-container .xterm-viewport::-webkit-scrollbar {
         width: 14px;

@@ -58,17 +58,17 @@ export class ScrollbackNormalizationUtility {
           typeof item === 'object' &&
           item !== null &&
           'content' in item &&
-          typeof (item as any).content === 'string'
+          typeof (item as Record<string, unknown>).content === 'string'
         );
       })
       .map((item) => {
-        const type = (item as any).type;
+        const type = item.type;
         const normalizedType = type === 'input' || type === 'error' ? type : ('output' as const);
 
         return {
-          content: (item as any).content,
+          content: item.content as string,
           type: normalizedType,
-          timestamp: (item as any).timestamp,
+          timestamp: item.timestamp as number | undefined,
         };
       });
   }

@@ -277,7 +277,7 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
       // Force reflow to ensure CSS changes are applied before reading dimensions
       DOMUtils.forceReflow(terminalsWrapper);
 
-      const redistribute = () => {
+      const redistribute = (): void => {
         DOMUtils.forceReflow(terminalsWrapper);
         const availableHeight = terminalsWrapper?.clientHeight ?? 0;
         this.log(`🔄 [SPLIT] redistribute: availableHeight=${availableHeight}px`);
@@ -445,7 +445,7 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
   private getSplitManager(): ISplitLayoutController | null {
     // coordinatorからSplitManagerを取得
     if (this.coordinator && 'splitManager' in this.coordinator) {
-      return (this.coordinator as any).splitManager as ISplitLayoutController;
+      return (this.coordinator as { splitManager: ISplitLayoutController }).splitManager;
     }
     return null;
   }
@@ -528,7 +528,11 @@ export class DisplayModeManager extends BaseManager implements IDisplayModeManag
     tabs?.updateModeIndicator(mode);
 
     // Update UIManager's fullscreen state for border mode logic
-    const uiManager = (this.coordinator as any)?.uiManager;
+    const uiManager = (
+      this.coordinator as {
+        uiManager?: { setFullscreenMode?: (isFullscreen: boolean) => void };
+      } | null
+    )?.uiManager;
     if (uiManager?.setFullscreenMode) {
       uiManager.setFullscreenMode(mode === 'fullscreen');
     }

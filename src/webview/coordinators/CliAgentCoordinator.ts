@@ -54,7 +54,7 @@ export interface ICliAgentCoordinatorDependencies {
 export class CliAgentCoordinator {
   constructor(private readonly deps: ICliAgentCoordinatorDependencies) {}
 
-  public getCliAgentState(terminalId: string) {
+  public getCliAgentState(terminalId: string): { status: string; agentType: string | null } | null {
     return this.deps.getAgentState(terminalId);
   }
 
@@ -66,7 +66,10 @@ export class CliAgentCoordinator {
     this.deps.setAgentDisconnected(terminalId);
   }
 
-  public detectAgentActivity(output: string, terminalId: string) {
+  public detectAgentActivity(
+    output: string,
+    terminalId: string
+  ): { isAgentOutput: boolean; agentType: string | null; isDisplayingChoices: boolean } {
     return this.deps.detectAgentActivity(output, terminalId);
   }
 
@@ -193,7 +196,13 @@ export class CliAgentCoordinator {
     log(`✅ [REFACTORED] CLI Agent status updated for terminal: ${terminalId}`);
   }
 
-  public getAgentStats() {
+  public getAgentStats(): {
+    totalAgents: number;
+    connectedAgents: number;
+    disconnectedAgents: number;
+    currentConnectedId: string | null;
+    agentTypes: string[];
+  } {
     return this.deps.getAgentStats();
   }
 

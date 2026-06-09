@@ -82,7 +82,11 @@ describe('AddonLoader', () => {
         { AddonClass: MockAddon, options: { addonName: 'Addon2' } },
       ];
 
-      const resultMap = await AddonLoader.loadMultipleAddons(mockTerminal, 't1', addons);
+      const resultMap = await AddonLoader.loadMultipleAddons(
+        mockTerminal,
+        't1',
+        addons as unknown as Parameters<typeof AddonLoader.loadMultipleAddons>[2]
+      );
 
       expect(resultMap.size).toBe(2);
       expect(resultMap.get('Addon1')).toBeInstanceOf(MockAddon);

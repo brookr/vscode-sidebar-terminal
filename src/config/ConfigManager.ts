@@ -15,6 +15,7 @@ export class ConfigManager {
   private _cacheExpiry = new Map<string, number>();
   private readonly CACHE_TTL = CONFIG_CACHE_CONSTANTS.CACHE_TTL_MS;
   private _initialized = false;
+  private _configWatcher: vscode.Disposable | undefined;
 
   public static getInstance(): ConfigManager {
     if (!ConfigManager._instance) {
@@ -32,7 +33,8 @@ export class ConfigManager {
 
     try {
       if (vscode?.workspace?.onDidChangeConfiguration) {
-        vscode.workspace.onDidChangeConfiguration((event) => {
+        // eslint-disable-next-line no-restricted-syntax -- stored in _configWatcher and disposed in dispose()
+        this._configWatcher = vscode.workspace.onDidChangeConfiguration((event) => {
           if (
             event.affectsConfiguration(CONFIG_SECTIONS.SIDEBAR_TERMINAL) ||
             event.affectsConfiguration(CONFIG_SECTIONS.EDITOR) ||
@@ -364,6 +366,7 @@ export class ConfigManager {
   public onConfigurationChange(
     callback: (event: vscode.ConfigurationChangeEvent) => void
   ): vscode.Disposable {
+    // eslint-disable-next-line no-restricted-syntax -- passthrough: the returned Disposable is owned and disposed by the caller
     return vscode.workspace.onDidChangeConfiguration(callback);
   }
 
@@ -382,6 +385,13 @@ export class ConfigManager {
       size: this._configCache.size,
       keys: Array.from(this._configCache.keys()),
     };
+  }
+
+  public dispose(): void {
+    this._configWatcher?.dispose();
+    this._configWatcher = undefined;
+    this._initialized = false;
+    this.clearCache();
   }
 }
 

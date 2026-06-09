@@ -125,6 +125,10 @@ export class MessageHandlerRegistrar {
   }
 
   private _buildTerminalHandlers(): HandlerDefinition[] {
+    return [...this._buildTerminalLifecycleHandlers(), ...this._buildTerminalIoHandlers()];
+  }
+
+  private _buildTerminalLifecycleHandlers(): HandlerDefinition[] {
     const tch = this.deps.terminalCommandHandlers;
     return [
       {
@@ -197,6 +201,12 @@ export class MessageHandlerRegistrar {
         handler: async (msg) => await tch.handleUpdateTerminalHeader(msg),
         category: 'terminal',
       },
+    ];
+  }
+
+  private _buildTerminalIoHandlers(): HandlerDefinition[] {
+    const tch = this.deps.terminalCommandHandlers;
+    return [
       {
         command: 'requestInitialTerminal',
         handler: async (msg) => await tch.handleRequestInitialTerminal(msg),
