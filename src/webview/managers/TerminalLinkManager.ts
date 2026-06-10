@@ -42,9 +42,13 @@ export class TerminalLinkManager extends BaseManager {
   // 'ctrlCmd' means Cmd/Ctrl is for multi-cursor, so Alt opens links
   private linkModifier: 'alt' | 'ctrlCmd' = 'alt';
 
-  // Simple regex to match file paths
-  // Matches: /path/to/file, ./relative/path, ../parent/path, C:\windows\path
-  private readonly filePathRegex = /(?:\.{0,2}\/|[A-Za-z]:\\)[^\s"'<>()[\]{}|]+/g;
+  // Regex to match file paths.
+  // Matches: /abs/path, ./rel, ../parent, ~/home, C:\windows\path, and bare
+  // relative paths like src/file.ts or .tmp/dir/ (common in CLI-agent output).
+  // The lookbehind on the bare-relative alternative prevents matching the tail
+  // of a longer token (e.g. the authority inside https://example.com/x).
+  private readonly filePathRegex =
+    /(?:~\/|\.{1,2}\/|\/|[A-Za-z]:\\|(?<![\w/@.-])\.?[\w][\w@.-]*\/)[^\s"'<>()[\]{}|]+/g;
 
   constructor(coordinator: IManagerCoordinator) {
     super('TerminalLinkManager', {
@@ -140,6 +144,14 @@ export class TerminalLinkManager extends BaseManager {
 
     while ((match = this.filePathRegex.exec(text)) !== null) {
       const raw = match[0];
+
+      // Skip scheme://authority/path matches — URLs belong to WebLinksAddon.
+      // lastIndex is already past the whole URL, so its inner segments are
+      // not re-matched as file links either.
+      if (raw.startsWith('//') && match.index > 0 && text[match.index - 1] === ':') {
+        continue;
+      }
+
       const cleaned = this.cleanLinkText(raw);
       if (!cleaned) continue;
 
@@ -256,13 +268,19 @@ export class TerminalLinkManager extends BaseManager {
    * Check if a string looks like a valid file path
    */
   private isValidFilePath(path: string): boolean {
-    // Must start with /, ./, ../, or drive letter
-    const hasPathPrefix = /^(\/|\.\.?\/|[A-Za-z]:\\)/.test(path);
-    if (!hasPathPrefix) return false;
+    // Prefixed forms: /abs, ./rel, ../rel, ~/home, C:\windows
+    if (/^(\/|~\/|\.\.?\/|[A-Za-z]:\\)/.test(path)) {
+      return path.includes('/') || path.includes('\\');
+    }
 
-    // Must have at least one path separator
-    const hasPathSeparator = path.includes('/') || path.includes('\\');
-    return hasPathSeparator;
+    // Bare relative (src/file.ts) or dot-dir (.tmp/x/) forms: require a
+    // file-extension-like last segment, depth >= 3, or a trailing slash so
+    // prose like "and/or" or "input/output" doesn't linkify.
+    if (!/^\.?[\w][\w@.-]*\//.test(path)) return false;
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length === 0) return false;
+    const last = segments[segments.length - 1] ?? '';
+    return path.endsWith('/') || segments.length >= 3 || /\.[A-Za-z0-9]+$/.test(last);
   }
 
   /**

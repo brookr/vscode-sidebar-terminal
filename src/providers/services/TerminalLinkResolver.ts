@@ -83,11 +83,24 @@ export class TerminalLinkResolver {
       return;
     }
 
-    const resolvedUri = await this.resolveFileLink(filePath, message.terminalId);
-    if (!resolvedUri) {
+    const target = await this.resolveLinkTarget(filePath, message.terminalId);
+    if (!target) {
       showError(`Unable to locate file from terminal link. Path: ${filePath}`);
       return;
     }
+
+    // Directories can't open in an editor — reveal them in the Explorer.
+    if (target.isDirectory) {
+      try {
+        await vscode.commands.executeCommand('revealInExplorer', target.uri);
+        log(`🔗 [LINK-RESOLVER] Revealed directory link in Explorer: ${target.uri.fsPath}`);
+      } catch (error) {
+        log('❌ [LINK-RESOLVER] Failed to reveal directory link:', error);
+      }
+      return;
+    }
+
+    const resolvedUri = target.uri;
 
     try {
       const document = await vscode.workspace.openTextDocument(resolvedUri);
@@ -126,14 +139,27 @@ export class TerminalLinkResolver {
    * 4. Absolute path (if provided)
    */
   public async resolveFileLink(filePath: string, terminalId?: string): Promise<vscode.Uri | null> {
+    const target = await this.resolveLinkTarget(filePath, terminalId);
+    return target && !target.isDirectory ? target.uri : null;
+  }
+
+  /**
+   * Resolve a link path to an existing file or directory on disk
+   */
+  private async resolveLinkTarget(
+    filePath: string,
+    terminalId?: string
+  ): Promise<{ uri: vscode.Uri; isDirectory: boolean } | null> {
     const candidates = this.buildPathCandidates(filePath, terminalId);
 
     for (const candidate of candidates) {
       try {
         const stat = await fsPromises.stat(candidate);
-        if (stat.isFile()) {
-          log(`🔗 [LINK-RESOLVER] Resolved file path: ${candidate}`);
-          return vscode.Uri.file(candidate);
+        const isFile = stat.isFile();
+        const isDirectory = !isFile && stat.isDirectory();
+        if (isFile || isDirectory) {
+          log(`🔗 [LINK-RESOLVER] Resolved link path: ${candidate}`);
+          return { uri: vscode.Uri.file(candidate), isDirectory };
         }
       } catch (error) {
         // Ignore missing candidates
@@ -143,7 +169,7 @@ export class TerminalLinkResolver {
       }
     }
 
-    log(`❌ [LINK-RESOLVER] Failed to resolve file path: ${filePath}`);
+    log(`❌ [LINK-RESOLVER] Failed to resolve link path: ${filePath}`);
     return null;
   }
 

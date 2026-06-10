@@ -254,11 +254,8 @@ describe('TerminalLinkManager', () => {
       expect(detectedLinks[0]!.text).toBe('/path/to/file.ts:10:5');
     });
 
-    it('should detect URL path portion starting from first slash', () => {
-      // The regex pattern (?:\.{0,2}\/|[A-Za-z]:\\) matches 0-2 dots + /
-      // For https://example.com/path, it matches starting at the first /
-      // (with 0 dots before it), then continues with /example.com/path
-      const lines = ['https://example.com/path'];
+    it('should not detect file links inside URLs (WebLinksAddon owns those)', () => {
+      const lines = ['https://example.com/src/file.ts'];
       const mockTerminal = createMockTerminal(lines);
       let detectedLinks: ILink[] = [];
 
@@ -271,10 +268,98 @@ describe('TerminalLinkManager', () => {
 
       manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
 
-      // The regex matches //example.com/path (0 dots + / + rest)
-      // This looks like a file path to the regex
+      expect(detectedLinks.length).toBe(0);
+    });
+
+    it('should detect bare relative paths with a file extension', () => {
+      const lines = ['edited src/utils/logger.ts and ran tests'];
+      const mockTerminal = createMockTerminal(lines);
+      let detectedLinks: ILink[] = [];
+
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (links) => {
+          detectedLinks = links!;
+        });
+        return { dispose: vi.fn() };
+      });
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+
       expect(detectedLinks.length).toBe(1);
-      expect(detectedLinks[0]!.text).toBe('//example.com/path');
+      expect(detectedLinks[0]!.text).toBe('src/utils/logger.ts');
+    });
+
+    it('should detect bare relative paths with line numbers', () => {
+      const lines = ['error in src/app/main.ts:42:7'];
+      const mockTerminal = createMockTerminal(lines);
+      let detectedLinks: ILink[] = [];
+
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (links) => {
+          detectedLinks = links!;
+        });
+        return { dispose: vi.fn() };
+      });
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+
+      expect(detectedLinks.length).toBe(1);
+      expect(detectedLinks[0]!.text).toBe('src/app/main.ts:42:7');
+    });
+
+    it('should detect dot-directory paths with trailing slash', () => {
+      const lines = ['artifact in .tmp/invoice-ready-notes/ps-demo/2026-06-09T19-33-56-153Z/'];
+      const mockTerminal = createMockTerminal(lines);
+      let detectedLinks: ILink[] = [];
+
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (links) => {
+          detectedLinks = links!;
+        });
+        return { dispose: vi.fn() };
+      });
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+
+      expect(detectedLinks.length).toBe(1);
+      expect(detectedLinks[0]!.text).toBe(
+        '.tmp/invoice-ready-notes/ps-demo/2026-06-09T19-33-56-153Z/'
+      );
+    });
+
+    it('should detect tilde-prefixed home paths', () => {
+      const lines = ['config at ~/projects/polygoons/ralph.yml'];
+      const mockTerminal = createMockTerminal(lines);
+      let detectedLinks: ILink[] = [];
+
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (links) => {
+          detectedLinks = links!;
+        });
+        return { dispose: vi.fn() };
+      });
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+
+      expect(detectedLinks.length).toBe(1);
+      expect(detectedLinks[0]!.text).toBe('~/projects/polygoons/ralph.yml');
+    });
+
+    it('should not linkify prose like and/or', () => {
+      const lines = ['choose one and/or the other, input/output streams'];
+      const mockTerminal = createMockTerminal(lines);
+      let detectedLinks: ILink[] = [];
+
+      vi.mocked(mockTerminal.registerLinkProvider).mockImplementation((provider) => {
+        provider.provideLinks(1, (links) => {
+          detectedLinks = links!;
+        });
+        return { dispose: vi.fn() };
+      });
+
+      manager.registerTerminalLinkHandlers(mockTerminal, 'terminal-1');
+
+      expect(detectedLinks.length).toBe(0);
     });
 
     it('should clean trailing punctuation from paths', () => {
