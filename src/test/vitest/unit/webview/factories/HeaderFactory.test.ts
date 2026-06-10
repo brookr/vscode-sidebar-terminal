@@ -420,7 +420,7 @@ describe('HeaderFactory', () => {
       expect(redOption.style.opacity).toBe('0.6');
     });
 
-    it('should flash processing indicator when color is selected', () => {
+    it('should flash the status dot when color is selected', () => {
       vi.useFakeTimers();
       const onHeaderUpdate = vi.fn();
       const elements = HeaderFactory.createTerminalHeader({
@@ -435,24 +435,22 @@ describe('HeaderFactory', () => {
       const indicator = elements.container.querySelector(
         '.terminal-processing-indicator'
       ) as HTMLElement;
-      const flow = elements.container.querySelector(
-        '.terminal-processing-indicator-flow'
-      ) as HTMLElement;
       expect(indicator.style.opacity).toBe('0');
-      expect(flow.style.animation).toContain('infinite');
+      expect(indicator.dataset.state).toBe('none');
 
       const pinkOption = elements.titleSection.querySelector(
         '[data-indicator-color="#FF69B4"]'
       ) as HTMLButtonElement;
       pinkOption.click();
 
+      // Palette click flashes the dot (jsdom cannot represent the var()
+      // backgroundColor value, so assert visibility only).
       expect(indicator.style.opacity).toBe('1');
-      // Palette click should provide a single-run animation for quick color confirmation.
-      expect(flow.style.animation).not.toContain('infinite');
 
+      // After the flash, the dot restores its previous (hidden) state.
       vi.advanceTimersByTime(600);
       expect(indicator.style.opacity).toBe('0');
-      expect(flow.style.animation).toContain('infinite');
+      expect(indicator.dataset.state).toBe('none');
 
       vi.useRealTimers();
     });

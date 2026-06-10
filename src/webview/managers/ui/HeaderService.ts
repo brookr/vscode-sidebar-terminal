@@ -5,7 +5,11 @@
  * Handles terminal header creation, caching, and DOM operations.
  */
 
-import { HeaderFactory, TerminalHeaderElements } from '../../factories/HeaderFactory';
+import {
+  HeaderFactory,
+  ProcessingIndicatorState,
+  TerminalHeaderElements,
+} from '../../factories/HeaderFactory';
 import { uiLogger } from '../../utils/ManagerLogger';
 import { webview as log } from '../../../utils/logger';
 
@@ -136,11 +140,26 @@ export class HeaderService {
   }
 
   public setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void {
+    this.setTerminalProcessingState(terminalId, isProcessing ? 'processing' : 'none');
+  }
+
+  public setTerminalProcessingState(terminalId: string, state: ProcessingIndicatorState): void {
     const headerElements = this.headerElementsCache.get(terminalId);
     if (!headerElements) {
       return;
     }
-    HeaderFactory.setProcessingIndicatorActive(headerElements, isProcessing);
+    HeaderFactory.setProcessingIndicatorState(headerElements, state);
+  }
+
+  /**
+   * Clear the "done" notification dot when the user focuses the terminal.
+   * A live "processing" indicator is left untouched.
+   */
+  public clearDoneIndicator(terminalId: string): void {
+    const headerElements = this.headerElementsCache.get(terminalId);
+    if (headerElements?.processingIndicator?.dataset.state === 'done') {
+      HeaderFactory.setProcessingIndicatorState(headerElements, 'none');
+    }
   }
 
   public setHeaderEnhancementsEnabled(enabled: boolean): void {

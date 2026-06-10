@@ -15,7 +15,7 @@ import {
   TerminalTheme,
 } from '../utils/WebviewThemeUtils';
 import { IUIManager } from '../interfaces/ManagerInterfaces';
-import { TerminalHeaderElements } from '../factories/HeaderFactory';
+import { ProcessingIndicatorState, TerminalHeaderElements } from '../factories/HeaderFactory';
 import { DOMUtils } from '../utils/DOMUtils';
 import { BaseManager } from './BaseManager';
 import { uiLogger } from '../utils/ManagerLogger';
@@ -249,6 +249,9 @@ export class UIManager extends BaseManager implements IUIManager {
     // Auto-update terminal count for "only when multiple" border logic
     this.borderService.setTerminalCount(allContainers.size);
     this.borderService.updateTerminalBorders(activeTerminalId, allContainers);
+
+    // Focusing a terminal acknowledges its "done" notification dot.
+    this.headerService.clearDoneIndicator(activeTerminalId);
   }
 
   /**
@@ -605,6 +608,10 @@ export class UIManager extends BaseManager implements IUIManager {
 
   public setTerminalProcessingIndicator(terminalId: string, isProcessing: boolean): void {
     this.headerService.setTerminalProcessingIndicator(terminalId, isProcessing);
+  }
+
+  public setTerminalProcessingState(terminalId: string, state: ProcessingIndicatorState): void {
+    this.headerService.setTerminalProcessingState(terminalId, state);
   }
 
   public setTerminalHeaderEnhancementsEnabled(enabled: boolean): void {

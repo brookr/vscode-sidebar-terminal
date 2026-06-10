@@ -676,7 +676,10 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
 
     const timer = setTimeout(() => {
       this.processingTimers.delete(terminalId);
-      this.setProcessingIndicator(terminalId, false, coordinator);
+      // Output went idle: on an unfocused terminal leave a "done" notification
+      // dot for the user to review; on the focused terminal just clear.
+      const isActive = coordinator.getActiveTerminalId?.() === terminalId;
+      this.setProcessingState(terminalId, isActive ? 'none' : 'done', coordinator);
     }, TerminalLifecycleMessageHandler.PROCESSING_IDLE_TIMEOUT_MS);
 
     this.processingTimers.set(terminalId, timer);
@@ -697,16 +700,29 @@ export class TerminalLifecycleMessageHandler implements IMessageHandler {
     isProcessing: boolean,
     coordinator: IManagerCoordinator
   ): void {
-    // The only isProcessing=true caller (markTerminalProcessing) already gated on
+    this.setProcessingState(terminalId, isProcessing ? 'processing' : 'none', coordinator);
+  }
+
+  private setProcessingState(
+    terminalId: string,
+    state: 'none' | 'processing' | 'done',
+    coordinator: IManagerCoordinator
+  ): void {
+    // The only 'processing' caller (markTerminalProcessing) already gated on
     // canShowProcessingIndicator(); skip the redundant per-output-chunk re-check.
     const managers = coordinator.getManagers?.();
     const uiManager = managers?.ui as
       | {
+          setTerminalProcessingState?: (id: string, state: 'none' | 'processing' | 'done') => void;
           setTerminalProcessingIndicator?: (id: string, processing: boolean) => void;
         }
       | undefined;
 
-    uiManager?.setTerminalProcessingIndicator?.(terminalId, isProcessing);
+    if (uiManager?.setTerminalProcessingState) {
+      uiManager.setTerminalProcessingState(terminalId, state);
+      return;
+    }
+    uiManager?.setTerminalProcessingIndicator?.(terminalId, state === 'processing');
   }
 
   private isHeaderEnhancementsEnabled(coordinator: IManagerCoordinator): boolean {

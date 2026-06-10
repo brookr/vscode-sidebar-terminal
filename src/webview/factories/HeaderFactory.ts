@@ -33,6 +33,9 @@ interface HeaderEditorContext {
   ) => void;
 }
 
+/** Tab status dot state: dashed circle while processing, blue dot when done. */
+export type ProcessingIndicatorState = 'none' | 'processing' | 'done';
+
 export interface TerminalHeaderElements {
   container: HTMLElement;
   titleSection: HTMLElement;
@@ -290,42 +293,29 @@ export class HeaderFactory {
   }
 
   /**
-   * Create the processing indicator element (animated progress bar) with its flow child.
+   * Create the processing/notification status dot shown on the tab:
+   * - dashed hollow circle while the AI agent is producing output
+   * - solid blue dot once output finishes on an unfocused tab (cleared on focus)
    */
   private static createProcessingIndicator(): HTMLElement {
     const processingIndicator = DOMUtils.createElement(
-      'div',
+      'span',
       {
-        position: 'absolute',
-        top: '0',
-        left: '0',
-        right: '0',
-        height: '2px',
-        overflow: 'hidden',
+        flex: '0 0 auto',
+        width: '9px',
+        height: '9px',
+        marginRight: '6px',
+        borderRadius: '50%',
+        boxSizing: 'border-box',
         pointerEvents: 'none',
         opacity: '0',
-        transition: 'opacity 0.12s ease',
+        transition: 'opacity 0.12s ease, background-color 0.12s ease',
       },
       {
         className: 'terminal-processing-indicator',
       }
     );
-
-    const processingIndicatorFlow = DOMUtils.createElement(
-      'div',
-      {
-        width: '42%',
-        height: '100%',
-        background:
-          'linear-gradient(90deg, transparent 0%, var(--terminal-indicator-color) 22%, var(--terminal-indicator-color) 78%, transparent 100%)',
-        transform: 'translateX(-130%)',
-        animation: 'terminal-processing-flow 1.1s linear infinite',
-      },
-      {
-        className: 'terminal-processing-indicator-flow',
-      }
-    );
-    processingIndicator.appendChild(processingIndicatorFlow);
+    processingIndicator.dataset.state = 'none';
 
     return processingIndicator;
   }
@@ -442,8 +432,6 @@ export class HeaderFactory {
       headerEnhancementsEnabled,
     });
 
-    HeaderFactory.ensureProcessingIndicatorStyles();
-
     const processingIndicator = HeaderFactory.createProcessingIndicator();
 
     const { titleSection, nameSpan, idSpan, statusSection, controlsSection } =
@@ -504,8 +492,8 @@ export class HeaderFactory {
       });
     }
 
-    // 要素を組み立て
-    DOMUtils.appendChildren(titleSection, nameSpan);
+    // 要素を組み立て (status dot sits on the tab, before the terminal name)
+    DOMUtils.appendChildren(titleSection, processingIndicator, nameSpan);
 
     // Add buttons to controls section (splitButton before closeButton)
     if (splitButton) {
@@ -514,13 +502,7 @@ export class HeaderFactory {
       DOMUtils.appendChildren(controlsSection, aiAgentToggleButton, closeButton);
     }
 
-    DOMUtils.appendChildren(
-      container,
-      processingIndicator,
-      titleSection,
-      statusSection,
-      controlsSection
-    );
+    DOMUtils.appendChildren(container, titleSection, statusSection, controlsSection);
 
     log(`🏗️ [HeaderFactory] Created unified header for terminal: ${terminalId}`);
 
@@ -684,34 +666,25 @@ export class HeaderFactory {
       container.style.setProperty('--terminal-indicator-color', color);
       refreshSelection();
 
-      // Flash processing indicator for visual feedback
-      const indicator = container.querySelector('.terminal-processing-indicator') as HTMLElement;
+      // Flash the status dot in the selected color for visual feedback,
+      // then restore whatever state it was showing before.
+      const indicator = container.querySelector(
+        '.terminal-processing-indicator'
+      ) as HTMLElement | null;
       if (indicator) {
-        const flow = container.querySelector(
-          '.terminal-processing-indicator-flow'
-        ) as HTMLElement | null;
         if (state.paletteFlashTimer) {
           window.clearTimeout(state.paletteFlashTimer);
           state.paletteFlashTimer = null;
         }
+        const previousState: ProcessingIndicatorState =
+          indicator.dataset.state === 'processing' || indicator.dataset.state === 'done'
+            ? indicator.dataset.state
+            : 'none';
         indicator.style.opacity = '1';
-        if (flow) {
-          // Show the flow once (not infinite) to confirm the selected color.
-          // Then restore the default infinite animation used for the processing indicator.
-          // Reset animation state so it always starts from the beginning and looks smooth.
-          flow.style.willChange = 'transform';
-          flow.style.animation = 'none';
-          flow.style.transform = 'translateX(-130%)';
-          // Force reflow to apply the reset before re-enabling animation.
-          // eslint-disable-next-line @typescript-eslint/no-unused-expressions
-          flow.offsetHeight;
-          flow.style.animation = 'terminal-processing-flow 0.65s linear 1';
-        }
+        indicator.style.border = 'none';
+        indicator.style.backgroundColor = 'var(--terminal-indicator-color, #007acc)';
         state.paletteFlashTimer = window.setTimeout(() => {
-          indicator.style.opacity = '0';
-          if (flow) {
-            flow.style.animation = 'terminal-processing-flow 1.1s linear infinite';
-          }
+          HeaderFactory.renderProcessingIndicator(indicator, previousState);
           state.paletteFlashTimer = null;
         }, 600);
       }
@@ -1128,14 +1101,46 @@ export class HeaderFactory {
     elements: TerminalHeaderElements,
     isActive: boolean
   ): void {
+    HeaderFactory.setProcessingIndicatorState(elements, isActive ? 'processing' : 'none');
+  }
+
+  /**
+   * Set the tab status dot:
+   * - 'processing': dashed hollow circle (agent is producing output)
+   * - 'done': solid blue notification dot (output finished while unfocused)
+   * - 'none': hidden
+   */
+  public static setProcessingIndicatorState(
+    elements: TerminalHeaderElements,
+    state: ProcessingIndicatorState
+  ): void {
     if (!elements.processingIndicator) {
       return;
     }
     if (!HeaderFactory.areHeaderEnhancementsEnabled(elements)) {
-      elements.processingIndicator.style.opacity = '0';
+      HeaderFactory.renderProcessingIndicator(elements.processingIndicator, 'none');
       return;
     }
-    elements.processingIndicator.style.opacity = isActive ? '1' : '0';
+    HeaderFactory.renderProcessingIndicator(elements.processingIndicator, state);
+  }
+
+  private static renderProcessingIndicator(
+    indicator: HTMLElement,
+    state: ProcessingIndicatorState
+  ): void {
+    indicator.dataset.state = state;
+    if (state === 'none') {
+      indicator.style.opacity = '0';
+      return;
+    }
+    indicator.style.opacity = '1';
+    if (state === 'processing') {
+      indicator.style.border = '1px dashed var(--vscode-descriptionForeground, #8a8a8a)';
+      indicator.style.backgroundColor = 'transparent';
+    } else {
+      indicator.style.border = 'none';
+      indicator.style.backgroundColor = 'var(--vscode-charts-blue, #3794ff)';
+    }
   }
 
   public static setHeaderEnhancementsEnabled(
@@ -1191,22 +1196,6 @@ export class HeaderFactory {
         `🔄 [HeaderFactory] AI Agent toggle button visibility: ${visible} (status: ${agentStatus || 'none'})`
       );
     }
-  }
-
-  private static ensureProcessingIndicatorStyles(): void {
-    if (document.getElementById('terminal-processing-indicator-style')) {
-      return;
-    }
-
-    const style = document.createElement('style');
-    style.id = 'terminal-processing-indicator-style';
-    style.textContent = `
-      @keyframes terminal-processing-flow {
-        0% { transform: translateX(-130%); }
-        100% { transform: translateX(250%); }
-      }
-    `;
-    document.head.appendChild(style);
   }
 
   private static areHeaderEnhancementsEnabled(elements: TerminalHeaderElements): boolean {
