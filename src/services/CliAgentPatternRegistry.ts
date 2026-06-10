@@ -471,7 +471,11 @@ export class CliAgentPatternRegistry {
 
   private matchAgentAlias(token: string): AgentType | null {
     const normalized = token.toLowerCase();
-    return CliAgentPatternRegistry.AGENT_ALIASES[normalized] ?? null;
+    // Object.hasOwn guards against prototype-chain hits (e.g. a command named
+    // "constructor" or "__proto__" must not resolve to Object.prototype members).
+    return Object.hasOwn(CliAgentPatternRegistry.AGENT_ALIASES, normalized)
+      ? (CliAgentPatternRegistry.AGENT_ALIASES[normalized] ?? null)
+      : null;
   }
 
   /**
